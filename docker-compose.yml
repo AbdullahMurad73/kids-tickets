@@ -1,0 +1,45 @@
+# التشغيل:  docker compose up -d   ثم افتح http://localhost:8080/install/
+# بيانات قاعدة البيانات في صفحة التثبيت:
+#   Host: db   |   اسم القاعدة: kids_tickets   |   المستخدم: kt   |   كلمة المرور: ktpass
+services:
+  app:
+    build: .
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/html
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.0
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: kids_tickets
+      MYSQL_USER: kt
+      MYSQL_PASSWORD: ktpass
+      MYSQL_ROOT_PASSWORD: rootpass
+      TZ: Asia/Riyadh
+    ports:
+      - "3307:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootpass"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # واجهة لتصفح قاعدة البيانات: http://localhost:8081  (Server: db, User: kt, Password: ktpass)
+  phpmyadmin:
+    image: phpmyadmin:latest
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+    depends_on:
+      - db
+
+volumes:
+  dbdata:

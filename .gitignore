@@ -1,0 +1,15 @@
+# أسرار — لا تُرفع أبداً
+config.php
+.env
+
+# صور الجوائز المرفوعة
+uploads/*
+!uploads/.htaccess
+
+# نظام وأدوات
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+*.zip
