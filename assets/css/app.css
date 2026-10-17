@@ -27,7 +27,7 @@ button{cursor:pointer}
 .brand__text{font-family:var(--display);font-weight:800;font-size:1.6rem;letter-spacing:-.01em;line-height:1}
 .brand__text b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .nav__links{display:flex;gap:4px;margin-inline-start:18px}
-.nav__links a{display:flex;align-items:center;gap:8px;padding:10px 14px;color:var(--ink-2);font-weight:500;position:relative;border-radius:10px;transition:color .2s}
+.nav__links a{display:flex;align-items:center;gap:8px;padding:10px 14px;white-space:nowrap;color:var(--ink-2);font-weight:500;position:relative;border-radius:10px;transition:color .2s}
 .nav__links a .i{width:19px;height:19px}
 .nav__links a:hover{color:var(--ink)}
 .nav__links a.is-active{color:var(--violet-2)}
@@ -198,8 +198,10 @@ button{cursor:pointer}
   .nav__code{width:230px}
   .prize-row{grid-auto-columns:calc((100% - 3*14px)/4)}
 }
-@media (max-width:920px){
+@media (max-width:1040px){
   .nav__links{display:none}
+}
+@media (max-width:920px){
   .split{grid-template-columns:1fr}
   .prize-row{grid-auto-columns:calc((100% - 2*14px)/3)}
 }
