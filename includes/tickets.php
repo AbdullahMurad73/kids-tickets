@@ -68,7 +68,7 @@ function redeem_code(string $raw, string $actor, string $source = 'web'): array
             'ok'          => true,
             'result'      => 'win',
             'winner_id'   => $winnerId,
-            'prize'       => ['name' => $prize['name'], 'image' => prize_image_url($prize['image'])],
+            'prize'       => ['name' => $prize['name'], 'image' => prize_image_url($prize['image']), 'art' => prize_art_url($prize['name'], $prize['image'])],
             'claim_token' => $token,
             'claim_no'    => format_code($code),
         ];

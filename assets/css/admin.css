@@ -134,6 +134,20 @@ select option{background:var(--card)}
 .checklist li.ok::before{content:"✓";color:var(--green)}
 .checklist li.no::before{content:"○";color:var(--ink-3)}
 
+.banner-list{display:grid;gap:10px}
+.banner-item{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.02)}
+.banner-item.is-off{opacity:.5}
+.banner-item__img{aspect-ratio:16/7;border-radius:10px;background-size:cover;background-position:center}
+.banner-item__body{display:grid;gap:2px}
+.banner-item__actions{grid-column:1/-1}
+.banner-item__actions form{display:flex;gap:6px;flex-wrap:wrap;margin:0}
+.icon-btn[disabled]{opacity:.3;cursor:default}
+.grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.art-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.art-pick__item{display:grid;gap:4px;cursor:pointer;font-weight:500;text-align:center}
+.art-pick__item input{position:absolute;opacity:0}
+.art-pick__item span{aspect-ratio:16/8;border-radius:10px;background-size:cover;background-position:center;border:2px solid transparent}
+.art-pick__item input:checked+span{border-color:var(--violet);box-shadow:0 0 0 3px rgba(168,85,247,.3)}
 .steps{margin:0 0 12px;padding-inline-start:20px;display:grid;gap:8px}
 .copy-row{display:flex;gap:8px;margin-top:6px}
 .copy-row input{flex:1;font-size:.85rem}

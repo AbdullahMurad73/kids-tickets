@@ -4,32 +4,69 @@ require __DIR__ . '/includes/bootstrap.php';
 
 $siteName = setting('site_name', 'تذكرة الحظ');
 $tagline  = setting('site_tagline', 'أدخل رمز تذكرتك واكتشف إذا ربحت!');
+$botOn    = bot_enabled();
+
+$banners = q('SELECT * FROM banners WHERE is_active = 1 ORDER BY sort, id')->fetchAll();
+if (!$banners) {
+    $banners = [['eyebrow' => 'اكشف · افرح · اربح', 'title1' => 'جرّب حظك', 'title2' => 'واكشف تذكرتك', 'body' => $tagline, 'image' => 'art:hero-city.svg', 'btn_text' => 'اكشف تذكرتك']];
+}
 
 $prizes = q(
     "SELECT p.name, p.image, p.quantity, p.won_count
        FROM prizes p JOIN batches b ON b.id = p.batch_id
       WHERE b.status = 'active' AND (b.ends_at IS NULL OR b.ends_at > NOW())
-      ORDER BY p.quantity ASC, p.id DESC LIMIT 10"
+      ORDER BY (p.quantity <= p.won_count) ASC, p.quantity ASC, p.id DESC LIMIT 12"
 )->fetchAll();
 
 $winners = q(
-    "SELECT w.child_name, p.name AS prize, w.created_at
+    "SELECT w.child_name, w.created_at, p.name AS prize, p.image
        FROM winners w JOIN tickets t ON t.id = w.ticket_id JOIN prizes p ON p.id = t.prize_id
       WHERE w.child_name IS NOT NULL
       ORDER BY w.id DESC LIMIT 5"
 )->fetchAll();
 
 $prefill = isset($_GET['c']) ? format_code(substr(normalize_code((string)$_GET['c']), 0, CODE_LENGTH)) : '';
-$prizeTints = ['violet', 'pink', 'teal', 'sky', 'amber'];
-$botOn = bot_enabled();
+$support = preg_replace('/\D/', '', setting('support_whatsapp')) ?? '';
 
 function time_ago_ar(string $dt): string
 {
     $d = max(0, time() - strtotime($dt));
-    if ($d < 3600) return 'قبل ' . max(1, intdiv($d, 60)) . ' دقيقة';
-    if ($d < 86400) return 'قبل ' . intdiv($d, 3600) . ' ساعة';
+    if ($d < 3600) return 'قبل ' . max(1, intdiv($d, 60)) . ' د';
+    if ($d < 86400) return 'قبل ' . intdiv($d, 3600) . ' س';
     return 'قبل ' . intdiv($d, 86400) . ' يوم';
 }
+
+function icon(string $name): string
+{
+    $p = [
+        'home'    => '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
+        'gift'    => '<rect x="3" y="8" width="18" height="13" rx="2"/><path d="M3 12h18M12 8v13"/><path d="M12 8S10.5 3 7.5 3a2.5 2.5 0 0 0 0 5zM12 8s1.5-5 4.5-5a2.5 2.5 0 0 1 0 5z"/>',
+        'grid'    => '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+        'trophy'  => '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/>',
+        'chat'    => '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
+        'ticket'  => '<path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/>',
+        'search'  => '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
+        'play'    => '<path d="M7 4.5v15l13-7.5z" fill="currentColor"/>',
+        'plus'    => '<path d="M12 5v14M5 12h14"/>',
+        'qr'      => '<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z"/>',
+        'chevL'   => '<path d="M15 6l-6 6 6 6"/>',
+        'chevR'   => '<path d="M9 6l6 6-6 6"/>',
+        'arrowL'  => '<path d="M19 12H5M11 6l-6 6 6 6"/>',
+        'sparkle' => '<path d="M12 2l2.2 6.3L20 10l-5.8 1.7L12 18l-2.2-6.3L4 10l5.8-1.7zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z" fill="currentColor" stroke="none"/>',
+        'fire'    => '<path d="M12 2c1 4 6 6 6 11a6 6 0 0 1-12 0c0-2.5 1.2-4 2.5-5 0 2 1 3.5 2.5 3.5 0-4-1-6.5 1-9.5z" fill="currentColor" stroke="none"/>',
+        'star'    => '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" fill="currentColor" stroke="none"/>',
+        'clock'   => '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        'whatsapp'=> '<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z" fill="currentColor" stroke="none"/>',
+    ];
+    return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">' . ($p[$name] ?? '') . '</svg>';
+}
+
+$howCards = [
+    ['card-get.svg',    'احصل على تذكرة', 'كل تذكرة فيها رمز سري خاص بك', 'violet', 'scroll:#prizes'],
+    ['card-enter.svg',  'أدخل الرمز',     $botOn ? 'اكتبه هنا، امسح QR، أو أرسله واتساب' : 'اكتبه هنا أو امسح رمز QR', 'pink', 'enter'],
+    ['card-reveal.svg', 'اكشف النتيجة',   'افتح صندوق المفاجأة واعرف حظك', 'sky', 'enter'],
+    ['card-claim.svg',  'استلم جائزتك',   'نرسل التفاصيل لولي أمرك على واتساب', 'teal', 'scroll:#winners'],
+];
 ?>
 <!doctype html>
 <html lang="ar" dir="rtl">
@@ -38,7 +75,7 @@ function time_ago_ar(string $dt): string
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?= e($siteName) ?> — اكشف تذكرتك</title>
 <meta name="description" content="<?= e($tagline) ?>">
-<meta name="theme-color" content="#0d0a24">
+<meta name="theme-color" content="#0b0820">
 <meta name="csrf-token" content="<?= e(csrf_token()) ?>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,117 +84,88 @@ function time_ago_ar(string $dt): string
 <link rel="icon" href="<?= e(asset('assets/img/favicon.svg')) ?>" type="image/svg+xml">
 </head>
 <body>
-<div class="sky" aria-hidden="true"><span></span><span></span><span></span></div>
+<div class="bg" aria-hidden="true"></div>
 
+<!-- ===== الشريط العلوي ===== -->
 <header class="nav">
   <div class="wrap nav__inner">
-    <a class="brand" href="./">
-      <svg class="brand__mark" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="bm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c06bff"/><stop offset="1" stop-color="#4fd8ff"/></linearGradient></defs><path d="M8 12a4 4 0 0 1 4-4h24a4 4 0 0 1 4 4v6a6 6 0 0 0 0 12v6a4 4 0 0 1-4 4H12a4 4 0 0 1-4-4v-6a6 6 0 0 0 0-12z" fill="url(#bm)"/><path d="M24 15l2.6 5.4 5.9.8-4.3 4.1 1 5.8L24 28.4l-5.2 2.7 1-5.8-4.3-4.1 5.9-.8z" fill="#fff"/></svg>
-      <span><?= e($siteName) ?></span>
+    <a class="brand" href="./" aria-label="<?= e($siteName) ?>">
+      <svg class="brand__mark" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="bm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c06bff"/><stop offset="1" stop-color="#4fd8ff"/></linearGradient></defs><ellipse cx="24" cy="25" rx="21" ry="7" fill="none" stroke="url(#bm)" stroke-width="3" transform="rotate(-18 24 25)"/><circle cx="24" cy="24" r="11" fill="url(#bm)"/><path d="M38 6l1.4 3.6L43 11l-3.6 1.4L38 16l-1.4-3.6L33 11l3.6-1.4z" fill="#d9a8ff"/></svg>
+      <span class="brand__text"><?php $parts = explode(' ', $siteName, 2); ?><?= e($parts[0]) ?><?php if (isset($parts[1])): ?> <b><?= e($parts[1]) ?></b><?php endif; ?></span>
     </a>
+
     <nav class="nav__links" aria-label="القائمة">
-      <a href="#top" class="is-active">الرئيسية</a>
-      <a href="#prizes">الجوائز</a>
-      <a href="#how">كيف تلعب</a>
-      <a href="#winners">الرابحون</a>
+      <a href="#top" class="is-active"><?= icon('home') ?>الرئيسية</a>
+      <a href="#prizes"><?= icon('gift') ?>الجوائز</a>
+      <a href="#how"><?= icon('grid') ?>كيف تلعب</a>
+      <a href="#winners"><?= icon('trophy') ?>الرابحون</a>
+      <?php if ($support): ?><a href="https://wa.me/<?= e($support) ?>" target="_blank" rel="noopener"><?= icon('chat') ?>تواصل معنا</a><?php endif; ?>
     </nav>
-    <a href="#top" class="nav__cta" data-focus-code>اكشف تذكرتك</a>
+
+    <form class="nav__code" id="navCode" autocomplete="off" role="search">
+      <?= icon('ticket') ?>
+      <label for="navCodeInput" class="sr-only">رمز التذكرة</label>
+      <input id="navCodeInput" dir="ltr" maxlength="14" spellcheck="false" placeholder="أدخل رمز التذكرة…">
+      <button type="submit" aria-label="اكشف"><?= icon('search') ?></button>
+    </form>
+
+    <button type="button" class="nav__avatar" data-open-enter aria-label="اكشف تذكرتك">
+      <img src="<?= e(asset('assets/img/art/avatar.svg')) ?>" alt="">
+    </button>
   </div>
 </header>
 
 <main id="top">
-  <!-- البانر الرئيسي -->
-  <section class="wrap hero">
-    <div class="hero__card">
-      <div class="hero__text">
-        <p class="eyebrow">اكشف · افرح · اربح</p>
-        <h1>جرّب حظك<br><span class="grad">واكشف تذكرتك</span></h1>
-        <p class="hero__lead"><?= e($tagline) ?></p>
-
-        <form class="code-form" id="codeForm" autocomplete="off" novalidate>
-          <label for="code" class="sr-only">رمز التذكرة</label>
-          <input id="code" name="code" inputmode="text" maxlength="14" dir="ltr" spellcheck="false"
-                 placeholder="XXXX-XXXX-XX" value="<?= e($prefill) ?>" aria-describedby="codeHint">
-          <div class="code-form__actions">
-            <button type="submit" class="btn btn--primary">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8M2 7h20v5H2zM12 22V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>
-              اكشف تذكرتي
-            </button>
-            <button type="button" class="btn btn--ghost" id="scanBtn">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></svg>
-              امسح QR
-            </button>
+  <!-- ===== البانر الرئيسي ===== -->
+  <section class="wrap">
+    <div class="hero" id="hero" data-count="<?= count($banners) ?>">
+      <?php foreach ($banners as $i => $b): ?>
+      <div class="hero__slide<?= $i === 0 ? ' is-on' : '' ?>" aria-hidden="<?= $i === 0 ? 'false' : 'true' ?>">
+        <div class="hero__art" style="background-image:url('<?= e(media_url($b['image'])) ?>')"></div>
+        <div class="hero__text">
+          <?php if ($b['eyebrow']): ?><p class="eyebrow"><?= e($b['eyebrow']) ?></p><?php endif; ?>
+          <h<?= $i === 0 ? '1' : '2' ?> class="hero__title"><?= e($b['title1']) ?><?php if ($b['title2']): ?><br><span class="grad"><?= e($b['title2']) ?></span><?php endif; ?></h<?= $i === 0 ? '1' : '2' ?>>
+          <span class="hero__bar" aria-hidden="true"></span>
+          <?php if ($b['body']): ?><p class="hero__lead"><?= e($b['body']) ?></p><?php endif; ?>
+          <div class="hero__btns">
+            <button type="button" class="btn btn--primary" data-open-enter><?= icon('play') ?><?= e($b['btn_text'] ?: 'اكشف تذكرتك') ?></button>
+            <a href="#prizes" class="btn btn--ghost"><?= icon('plus') ?>شاهد الجوائز</a>
           </div>
-          <p id="codeHint" class="code-form__hint">الرمز مكتوب على تذكرتك: 10 حروف وأرقام</p>
-          <?php if ($botOn): ?>
-          <a class="wa-link" href="<?= e(bot_chat_link()) ?>" target="_blank" rel="noopener">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.4.6-.4.4c-.1.2-.3.3-.1.6.2.3.8 1.3 1.6 2.1 1.1 1 2 1.3 2.3 1.4.3.2.5.1.6 0l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.1.1.6-.1 1.2z"/></svg>
-            أو أرسل الرمز على واتساب
-          </a>
-          <?php endif; ?>
-          <p class="code-form__error" id="codeError" role="alert"></p>
-        </form>
-        <div class="hero__dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></div>
+        </div>
       </div>
-
-      <div class="hero__art" aria-hidden="true">
-        <svg viewBox="0 0 420 380" class="mascot">
-          <defs>
-            <linearGradient id="tk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b65cff"/><stop offset=".55" stop-color="#7a5cff"/><stop offset="1" stop-color="#45c8ff"/></linearGradient>
-            <radialGradient id="glow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#c88cff" stop-opacity=".55"/><stop offset="1" stop-color="#c88cff" stop-opacity="0"/></radialGradient>
-            <linearGradient id="bal1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff7ac8"/><stop offset="1" stop-color="#ff4fa0"/></linearGradient>
-            <linearGradient id="bal2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6ff0ff"/><stop offset="1" stop-color="#2fb8ff"/></linearGradient>
-            <linearGradient id="bal3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe17a"/><stop offset="1" stop-color="#ffb84f"/></linearGradient>
-          </defs>
-          <circle cx="215" cy="200" r="170" fill="url(#glow)"/>
-          <g class="float-a"><path d="M88 52c0 22 -16 34 -16 34s-16-12-16-34a16 16 0 0 1 32 0z" fill="url(#bal1)"/><path d="M72 86q4 30 -6 60" stroke="#ff9bd6" stroke-width="1.5" fill="none" opacity=".7"/></g>
-          <g class="float-b"><path d="M372 92c0 24 -18 37 -18 37s-18-13-18-37a18 18 0 0 1 36 0z" fill="url(#bal2)"/><path d="M354 129q-6 30 4 62" stroke="#8fe8ff" stroke-width="1.5" fill="none" opacity=".7"/></g>
-          <g class="float-c"><path d="M330 22c0 16 -12 25 -12 25s-12-9-12-25a12 12 0 0 1 24 0z" fill="url(#bal3)"/><path d="M318 47q3 20 -3 40" stroke="#ffe5a0" stroke-width="1.2" fill="none" opacity=".7"/></g>
-          <!-- التذكرة الشخصية "تيكو" -->
-          <g class="mascot__body">
-            <g transform="rotate(-8 215 210)">
-              <path d="M110 120a16 16 0 0 1 16-16h178a16 16 0 0 1 16 16v44a26 26 0 0 0 0 52v44a16 16 0 0 1-16 16H126a16 16 0 0 1-16-16v-44a26 26 0 0 0 0-52z" fill="url(#tk)"/>
-              <path d="M110 120a16 16 0 0 1 16-16h178a16 16 0 0 1 16 16v44a26 26 0 0 0 0 52v44a16 16 0 0 1-16 16H126a16 16 0 0 1-16-16v-44a26 26 0 0 0 0-52z" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="2"/>
-              <line x1="262" y1="114" x2="262" y2="266" stroke="#fff" stroke-opacity=".45" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round"/>
-              <ellipse cx="160" cy="176" rx="14" ry="17" fill="#1b0f3d"/><ellipse cx="216" cy="176" rx="14" ry="17" fill="#1b0f3d"/>
-              <circle cx="165" cy="170" r="5" fill="#fff"/><circle cx="221" cy="170" r="5" fill="#fff"/>
-              <ellipse cx="146" cy="204" rx="11" ry="6" fill="#ff8fcf" opacity=".7"/><ellipse cx="230" cy="204" rx="11" ry="6" fill="#ff8fcf" opacity=".7"/>
-              <path d="M170 206q18 20 36 0" stroke="#1b0f3d" stroke-width="6" fill="none" stroke-linecap="round"/>
-              <path d="M290 172l5.5 11.2 12.3 1.8-8.9 8.7 2.1 12.3-11-5.8-11 5.8 2.1-12.3-8.9-8.7 12.3-1.8z" fill="#ffe27a"/>
-              <path d="M110 238q-34 8 -46 -14" stroke="url(#tk)" stroke-width="12" stroke-linecap="round" fill="none"/>
-              <path d="M320 150q36 -18 40 -50" stroke="url(#tk)" stroke-width="12" stroke-linecap="round" fill="none"/>
-            </g>
-          </g>
-          <g class="sparkles" fill="#fff"><path d="M60 250l4 10 10 4-10 4-4 10-4-10-10-4 10-4z"/><path d="M380 260l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" opacity=".8"/><path d="M250 40l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" opacity=".9"/><circle cx="120" cy="330" r="3" opacity=".7"/><circle cx="340" cy="330" r="2.5" opacity=".6"/></g>
-        </svg>
+      <?php endforeach; ?>
+      <?php if (count($banners) > 1): ?>
+      <div class="hero__dots" role="tablist" aria-label="البانرات">
+        <?php foreach ($banners as $i => $b): ?><button type="button" role="tab" class="<?= $i === 0 ? 'on' : '' ?>" data-slide="<?= $i ?>" aria-label="بانر <?= $i + 1 ?>"></button><?php endforeach; ?>
       </div>
+      <?php endif; ?>
     </div>
   </section>
 
-  <!-- الجوائز -->
+  <!-- ===== جوائز الحملة ===== -->
   <section class="wrap section" id="prizes">
     <div class="section__head">
-      <h2><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.4 6.9H22l-6 4.6 2.3 7L12 16.2 5.7 20.5 8 13.5 2 8.9h7.6z"/></svg>جوائز الحملة</h2>
-      <div class="scroller-ctrl">
-        <button type="button" class="circle-btn" data-scroll="prizeRow" data-dir="1" aria-label="السابق"><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
-        <button type="button" class="circle-btn" data-scroll="prizeRow" data-dir="-1" aria-label="التالي"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
-      </div>
+      <h2><?= icon('sparkle') ?>جوائز الحملة</h2>
+      <a href="#winners" class="view-all">عرض الرابحين <?= icon('chevL') ?></a>
     </div>
     <?php if ($prizes): ?>
-    <div class="prize-row" id="prizeRow">
-      <?php foreach ($prizes as $i => $p): $left = max(0, (int)$p['quantity'] - (int)$p['won_count']); ?>
-      <article class="prize-card tint-<?= $prizeTints[$i % count($prizeTints)] ?>">
-        <div class="prize-card__media">
-          <?php if ($p['image']): ?>
-            <img src="<?= e(prize_image_url($p['image'])) ?>" alt="<?= e($p['name']) ?>" loading="lazy">
-          <?php else: ?>
-            <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="10" y="28" width="44" height="28" rx="4" fill="rgba(255,255,255,.9)"/><rect x="6" y="20" width="52" height="12" rx="3" fill="#fff"/><rect x="29" y="20" width="6" height="36" fill="currentColor"/><path d="M32 20c-4-8-14-10-14-3 0 4 8 3 14 3zm0 0c4-8 14-10 14-3 0 4-8 3-14 3z" fill="none" stroke="#fff" stroke-width="3"/></svg>
-          <?php endif; ?>
-          <span class="badge"><?= $left > 0 ? 'متبقي ' . number_format($left) : 'نفدت' ?></span>
-        </div>
-        <h3><?= e($p['name']) ?></h3>
-      </article>
-      <?php endforeach; ?>
+    <div class="carousel">
+      <button type="button" class="carousel__arrow carousel__arrow--prev" data-scroll="prizeRow" data-dir="1" aria-label="السابق"><?= icon('chevR') ?></button>
+      <div class="prize-row" id="prizeRow">
+        <?php foreach ($prizes as $p):
+            $left = max(0, (int)$p['quantity'] - (int)$p['won_count']);
+            [$tierLabel, $tierIcon] = prize_tier((int)$p['quantity']); ?>
+        <article class="pcard<?= $left === 0 ? ' is-out' : '' ?>">
+          <img class="pcard__img" src="<?= e(prize_art_url($p['name'], $p['image'])) ?>" alt="" loading="lazy">
+          <span class="pcard__badge" title="المتبقي"><?= $left > 0 ? '×' . number_format($left) : 'نفدت' ?></span>
+          <div class="pcard__foot">
+            <h3><?= e($p['name']) ?></h3>
+            <span class="chip chip--<?= e($tierIcon) ?>"><?= icon($tierIcon) ?><?= e($tierLabel) ?></span>
+          </div>
+        </article>
+        <?php endforeach; ?>
+      </div>
+      <button type="button" class="carousel__arrow carousel__arrow--next" data-scroll="prizeRow" data-dir="-1" aria-label="التالي"><?= icon('chevL') ?></button>
     </div>
     <?php else: ?>
       <p class="empty">الجوائز تُعلن قريباً… ترقّبوا!</p>
@@ -165,34 +173,45 @@ function time_ago_ar(string $dt): string
   </section>
 
   <div class="wrap split">
-    <!-- كيف تلعب -->
+    <!-- ===== كيف تلعب ===== -->
     <section class="section" id="how">
-      <div class="section__head"><h2><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg>كيف تلعب</h2></div>
+      <div class="section__head"><h2><?= icon('grid') ?>كيف تلعب</h2></div>
       <div class="how-grid">
-        <div class="how-card tint-violet"><span class="how-card__n">1</span><h3>احصل على تذكرة</h3><p>كل تذكرة فيها رمز سري خاص بك</p></div>
-        <div class="how-card tint-pink"><span class="how-card__n">2</span><h3>أدخل الرمز</h3><p><?= $botOn ? 'اكتبه هنا، امسح QR، أو أرسله على واتساب' : 'اكتبه هنا أو امسح رمز QR' ?></p></div>
-        <div class="how-card tint-sky"><span class="how-card__n">3</span><h3>اكشف النتيجة</h3><p>افتح صندوق المفاجأة واعرف حظك</p></div>
-        <div class="how-card tint-teal"><span class="how-card__n">4</span><h3>استلم جائزتك</h3><p>نرسل التفاصيل لولي أمرك على واتساب</p></div>
+        <?php foreach ($howCards as $n => [$art, $title, $sub, $tint, $act]): ?>
+        <button type="button" class="hcard hcard--<?= $tint ?>" <?= str_starts_with($act, 'scroll:') ? 'data-scroll-to="' . e(substr($act, 7)) . '"' : 'data-open-enter' ?>>
+          <span class="hcard__art" style="background-image:url('<?= e(asset('assets/img/art/' . $art)) ?>')"></span>
+          <span class="hcard__text"><strong><?= e($title) ?></strong><small><?= e($sub) ?></small></span>
+          <span class="hcard__go"><?= icon('arrowL') ?></span>
+        </button>
+        <?php endforeach; ?>
       </div>
     </section>
 
-    <!-- آخر الرابحين -->
-    <section class="section winners" id="winners">
-      <div class="section__head"><h2><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-4-1-6 1-9z"/></svg>آخر الرابحين</h2></div>
-      <?php if ($winners): ?>
-      <ol class="winner-list">
-        <?php foreach ($winners as $i => $w): ?>
+    <!-- ===== آخر الرابحين ===== -->
+    <section class="section panel" id="winners">
+      <div class="section__head">
+        <h2><?= icon('fire') ?><?= $winners ? 'آخر الرابحين' : 'أبرز الجوائز' ?></h2>
+        <a href="#prizes" class="view-all">الكل <?= icon('chevL') ?></a>
+      </div>
+      <ol class="rank">
+        <?php if ($winners): foreach ($winners as $i => $w): ?>
         <li>
-          <span class="winner-list__n"><?= $i + 1 ?></span>
-          <span class="winner-list__avatar" aria-hidden="true"><?= e(mb_substr(first_name($w['child_name']), 0, 1)) ?></span>
-          <span class="winner-list__body"><strong><?= e(first_name($w['child_name'])) ?></strong><small>ربح <?= e($w['prize']) ?></small></span>
-          <span class="winner-list__time"><?= e(time_ago_ar($w['created_at'])) ?></span>
+          <span class="rank__n"><?= $i + 1 ?></span>
+          <img class="rank__thumb" src="<?= e(prize_art_url($w['prize'], $w['image'])) ?>" alt="" loading="lazy">
+          <span class="rank__body"><strong><?= e(first_name($w['child_name'])) ?></strong><small>ربح <?= e($w['prize']) ?></small></span>
+          <span class="rank__meta"><?= icon('clock') ?><?= e(time_ago_ar($w['created_at'])) ?></span>
         </li>
-        <?php endforeach; ?>
+        <?php endforeach; elseif ($prizes): foreach (array_slice($prizes, 0, 5) as $i => $p): [$tl, $ti] = prize_tier((int)$p['quantity']); ?>
+        <li>
+          <span class="rank__n"><?= $i + 1 ?></span>
+          <img class="rank__thumb" src="<?= e(prize_art_url($p['name'], $p['image'])) ?>" alt="" loading="lazy">
+          <span class="rank__body"><strong><?= e($p['name']) ?></strong><small><?= e($tl) ?> · كن أول الرابحين!</small></span>
+          <span class="rank__meta rank__meta--<?= e($ti) ?>"><?= icon($ti) ?>×<?= number_format(max(0, (int)$p['quantity'] - (int)$p['won_count'])) ?></span>
+        </li>
+        <?php endforeach; else: ?>
+          <li class="rank__empty">كن أول الرابحين! 🎉</li>
+        <?php endif; ?>
       </ol>
-      <?php else: ?>
-        <p class="empty">كن أول الرابحين! 🎉</p>
-      <?php endif; ?>
     </section>
   </div>
 </main>
@@ -201,18 +220,30 @@ function time_ago_ar(string $dt): string
   <div class="wrap footer__inner">
     <span>© <?= date('Y') ?> <?= e($siteName) ?></span>
     <span>نحفظ الاسم الأول وجوال ولي الأمر للرابحين فقط لتسليم الجائزة.</span>
-    <?php if ($wa = preg_replace('/\D/', '', setting('support_whatsapp'))): ?>
-      <a href="https://wa.me/<?= e($wa) ?>" target="_blank" rel="noopener">تواصل معنا على واتساب</a>
-    <?php endif; ?>
+    <?php if ($support): ?><a href="https://wa.me/<?= e($support) ?>" target="_blank" rel="noopener">تواصل معنا على واتساب</a><?php endif; ?>
   </div>
 </footer>
 
-<!-- نافذة النتيجة -->
-<div class="modal" id="resultModal" hidden role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+<!-- ===== نافذة الكشف ===== -->
+<div class="modal" id="resultModal" hidden role="dialog" aria-modal="true" aria-labelledby="enterTitle">
   <div class="modal__panel">
     <button type="button" class="modal__close" data-close aria-label="إغلاق">×</button>
 
-    <div class="stage stage--suspense" data-stage="suspense">
+    <div class="stage" data-stage="enter">
+      <img class="enter-mascot" src="<?= e(asset('assets/img/art/avatar.svg')) ?>" alt="">
+      <h2 id="enterTitle" class="enter-title">اكشف تذكرتك</h2>
+      <p class="enter-sub">اكتب الرمز المكتوب على تذكرتك (10 حروف وأرقام)</p>
+      <form class="code-form" id="codeForm" autocomplete="off" novalidate>
+        <label for="code" class="sr-only">رمز التذكرة</label>
+        <input id="code" name="code" inputmode="text" maxlength="14" dir="ltr" spellcheck="false" placeholder="XXXX-XXXX-XX" value="<?= e($prefill) ?>">
+        <p class="code-form__error" id="codeError" role="alert"></p>
+        <button type="submit" class="btn btn--primary btn--block"><?= icon('gift') ?>اكشف تذكرتي</button>
+        <button type="button" class="btn btn--ghost btn--block" id="scanBtn"><?= icon('qr') ?>امسح رمز QR</button>
+        <?php if ($botOn): ?><a class="wa-link" href="<?= e(bot_chat_link()) ?>" target="_blank" rel="noopener"><?= icon('whatsapp') ?>أو أرسل الرمز على واتساب</a><?php endif; ?>
+      </form>
+    </div>
+
+    <div class="stage stage--suspense" data-stage="suspense" hidden>
       <svg viewBox="0 0 200 200" class="giftbox" aria-hidden="true">
         <defs><linearGradient id="gb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c46bff"/><stop offset="1" stop-color="#6a5cff"/></linearGradient></defs>
         <rect x="40" y="88" width="120" height="86" rx="10" fill="url(#gb)"/>
@@ -225,7 +256,7 @@ function time_ago_ar(string $dt): string
 
     <div class="stage" data-stage="win" hidden>
       <p class="eyebrow">مبروووك!</p>
-      <h2 id="resultTitle" class="win-title">ألف مبروك! 🎉</h2>
+      <h2 class="win-title">ألف مبروك! 🎉</h2>
       <p class="win-sub">ربحت <strong id="prizeName"></strong></p>
       <div class="win-prize" id="prizeMedia"></div>
       <p class="claim-no">رقم المطالبة: <bdi id="claimNo" dir="ltr"></bdi></p>
@@ -263,12 +294,12 @@ function time_ago_ar(string $dt): string
     <div class="stage" data-stage="error" hidden>
       <h2 class="lose-title">أوبس!</h2>
       <p class="lose-sub" id="errorMsg"></p>
-      <button type="button" class="btn btn--primary" data-again>حسناً</button>
+      <button type="button" class="btn btn--primary" data-again>حاول مرة أخرى</button>
     </div>
   </div>
 </div>
 
-<!-- نافذة مسح QR -->
+<!-- ===== نافذة مسح QR ===== -->
 <div class="modal" id="scanModal" hidden role="dialog" aria-modal="true" aria-label="مسح رمز QR">
   <div class="modal__panel">
     <button type="button" class="modal__close" data-close aria-label="إغلاق">×</button>
@@ -279,7 +310,7 @@ function time_ago_ar(string $dt): string
 </div>
 
 <canvas id="confetti" aria-hidden="true"></canvas>
-<script>window.KT = { base: <?= json_encode(rtrim(base_url(''), '/') . '/', JSON_UNESCAPED_SLASHES) ?>, autoReveal: <?= $prefill !== '' ? 'true' : 'false' ?> };</script>
+<script>window.KT = { base: <?= json_encode(rtrim(base_url(''), '/') . '/', JSON_UNESCAPED_SLASHES) ?>, prefill: <?= $prefill !== '' ? 'true' : 'false' ?> };</script>
 <script src="<?= e(asset('assets/js/app.js')) ?>" defer></script>
 </body>
 </html>

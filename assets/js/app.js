@@ -29,26 +29,33 @@
   }
 
   /* ---------- إدخال الرمز ---------- */
-  input.addEventListener('input', () => {
-    const c = cleanCode(input.value);
-    input.value = fmt(c);
-    err.textContent = '';
-  });
-  if (input.value) input.focus();
-  document.querySelectorAll('[data-focus-code]').forEach((a) => a.addEventListener('click', () => setTimeout(() => input.focus(), 350)));
+  const navForm = $('#navCode');
+  const navInput = $('#navCodeInput');
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const code = cleanCode(input.value);
-    if (code.length !== 10) {
-      err.textContent = 'الرمز 10 حروف وأرقام، تأكد منه.';
-      input.classList.remove('shake'); void input.offsetWidth; input.classList.add('shake');
-      input.focus();
-      return;
-    }
+  function bindFormat(el) {
+    el.addEventListener('input', () => { el.value = fmt(cleanCode(el.value)); err.textContent = ''; });
+  }
+  bindFormat(input);
+  if (navInput) bindFormat(navInput);
+
+  function shake(el, msg) {
+    err.textContent = msg;
+    el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
+    el.focus();
+  }
+
+  function openEnter(prefill) {
+    if (typeof prefill === 'string') input.value = fmt(cleanCode(prefill));
+    err.textContent = '';
+    openModal(modal);
+    showStage('enter');
+    setTimeout(() => input.focus(), 60);
+  }
+
+  async function reveal(code) {
     const btn = form.querySelector('button[type=submit]');
     btn.disabled = true;
-    openModal(modal);
+    if (modal.hidden) openModal(modal);
     showStage('suspense');
     const box = $('.giftbox', modal);
     box.classList.remove('open');
@@ -60,11 +67,74 @@
       box.classList.add('open');
       await sleep(550);
     }
+    input.value = '';
+    if (navInput) navInput.value = '';
     if (data.result === 'win') return showWin(data);
-    if (data.result === 'lose') { showStage('lose'); input.value = ''; return; }
+    if (data.result === 'lose') return showStage('lose');
     $('#errorMsg').textContent = data.message || 'حدث خطأ، حاول مرة أخرى.';
     showStage('error');
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const code = cleanCode(input.value);
+    if (code.length !== 10) return shake(input, 'الرمز 10 حروف وأرقام، تأكد منه.');
+    reveal(code);
   });
+
+  if (navForm) navForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const code = cleanCode(navInput.value);
+    if (code.length === 10) return reveal(code);
+    openEnter(navInput.value);
+    if (code.length) err.textContent = 'الرمز 10 حروف وأرقام، تأكد منه.';
+  });
+
+  document.querySelectorAll('[data-open-enter]').forEach((b) => b.addEventListener('click', () => openEnter()));
+  document.querySelectorAll('[data-scroll-to]').forEach((b) => b.addEventListener('click', () => {
+    const t = document.querySelector(b.dataset.scrollTo);
+    if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }));
+
+  // رابط QR المطبوع (?c=CODE): نفتح النافذة والرمز جاهز، والطفل يضغط "اكشف" بنفسه
+  // (لا نكشف تلقائياً حتى لا تُستهلك التذكرة لو فتح الرابط شخص آخر، مثل المطبعة)
+  if (window.KT && window.KT.prefill) openEnter();
+
+  /* ---------- البانر المتحرك ---------- */
+  const hero = $('#hero');
+  if (hero) {
+    const slides = [...hero.querySelectorAll('.hero__slide')];
+    const dots = [...hero.querySelectorAll('.hero__dots button')];
+    let cur = 0, timer = null;
+    const go = (n) => {
+      cur = (n + slides.length) % slides.length;
+      slides.forEach((s, i) => { s.classList.toggle('is-on', i === cur); s.setAttribute('aria-hidden', i === cur ? 'false' : 'true'); });
+      dots.forEach((d, i) => d.classList.toggle('on', i === cur));
+    };
+    const play = () => { if (slides.length > 1 && !matchMedia('(prefers-reduced-motion: reduce)').matches) { clearInterval(timer); timer = setInterval(() => go(cur + 1), 6000); } };
+    dots.forEach((d) => d.addEventListener('click', () => { go(+d.dataset.slide); play(); }));
+    hero.addEventListener('mouseenter', () => clearInterval(timer));
+    hero.addEventListener('mouseleave', play);
+    let sx = null;
+    hero.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; }, { passive: true });
+    hero.addEventListener('touchend', (e) => {
+      if (sx === null) return;
+      const dx = e.changedTouches[0].clientX - sx; sx = null;
+      if (Math.abs(dx) > 40) { go(cur + (dx > 0 ? 1 : -1)); play(); }
+    });
+    play();
+  }
+
+  /* ---------- تمييز رابط القسم الحالي ---------- */
+  const links = [...document.querySelectorAll('.nav__links a[href^="#"]')];
+  const io = 'IntersectionObserver' in window ? new IntersectionObserver((entries) => {
+    entries.forEach((en) => {
+      if (!en.isIntersecting) return;
+      const id = '#' + en.target.id;
+      links.forEach((a) => a.classList.toggle('is-active', a.getAttribute('href') === id));
+    });
+  }, { rootMargin: '-45% 0px -50% 0px' }) : null;
+  if (io) ['top', 'prizes', 'how', 'winners'].forEach((id) => { const el = document.getElementById(id); if (el) io.observe(el); });
 
   /* ---------- النتيجة ---------- */
   function showStage(name) {
@@ -79,11 +149,8 @@
     $('#claimNo').textContent = data.claim_no;
     const media = $('#prizeMedia');
     media.innerHTML = '';
-    if (data.prize.image) {
-      const img = new Image(); img.src = data.prize.image; img.alt = data.prize.name; media.appendChild(img);
-    } else {
-      media.innerHTML = '<svg viewBox="0 0 64 64" aria-hidden="true"><rect x="10" y="28" width="44" height="28" rx="4" fill="#fff"/><rect x="6" y="20" width="52" height="12" rx="3" fill="#f3e8ff"/><rect x="29" y="20" width="6" height="36" fill="#ffd34f"/><path d="M32 20c-4-8-14-10-14-3 0 4 8 3 14 3zm0 0c4-8 14-10 14-3 0 4-8 3-14 3z" fill="none" stroke="#ffd34f" stroke-width="3"/></svg>';
-    }
+    const src = data.prize.art || data.prize.image;
+    if (src) { const img = new Image(); img.src = src; img.alt = data.prize.name; media.appendChild(img); }
     $('#claimForm').hidden = false;
     $('#claimForm').reset();
     $('#otpForm').hidden = true;
@@ -147,7 +214,7 @@
   document.querySelectorAll('.modal').forEach((m) => {
     m.addEventListener('click', (e) => {
       if (e.target === m || e.target.closest('[data-close]')) closeModal(m);
-      if (e.target.closest('[data-again]')) { closeModal(m); input.focus(); }
+      if (e.target.closest('[data-again]')) { showStage('enter'); setTimeout(() => input.focus(), 60); }
     });
   });
   document.addEventListener('keydown', (e) => {

@@ -150,6 +150,47 @@ function prize_image_url(?string $image): ?string
     return $image ? base_url('uploads/' . $image) : null;
 }
 
+/** صورة مرفوعة (uploads/) أو رسمة مدمجة بصيغة art:name.svg */
+function media_url(?string $image): string
+{
+    $image = (string)$image;
+    if (str_starts_with($image, 'art:')) {
+        $name = basename(substr($image, 4));
+        return asset('assets/img/art/' . $name);
+    }
+    return $image !== '' ? base_url('uploads/' . basename($image)) : asset('assets/img/art/prize-gift.svg');
+}
+
+/** صورة الجائزة: المرفوعة إن وُجدت، وإلا رسمة مناسبة حسب اسم الجائزة */
+function prize_art_url(string $name, ?string $image): string
+{
+    if ($image) return base_url('uploads/' . basename($image));
+    $map = [
+        'bike'    => ['دراج', 'سيكل', 'bike', 'سكوتر'],
+        'game'    => ['بلايستيشن', 'بلاي', 'العاب الكترون', 'جهاز ألعاب', 'جهاز العاب', 'تحكم', 'نينتندو', 'اكس بوكس', 'game', 'ps5'],
+        'teddy'   => ['دب', 'دمية', 'محشو', 'عروس', 'teddy'],
+        'ball'    => ['كرة', 'كوره', 'ball'],
+        'book'    => ['كتاب', 'قصة', 'قصص', 'مجلة', 'book'],
+        'voucher' => ['قسيمة', 'كوبون', 'بطاقة', 'رصيد', 'ريال', 'voucher', 'خصم'],
+        'robot'   => ['روبوت', 'آلي', 'robot', 'سيارة'],
+    ];
+    $n = mb_strtolower($name);
+    foreach ($map as $art => $words) {
+        foreach ($words as $w) {
+            if (str_contains($n, mb_strtolower($w))) return asset('assets/img/art/prize-' . $art . '.svg');
+        }
+    }
+    return asset('assets/img/art/prize-gift.svg');
+}
+
+/** تصنيف الجائزة حسب ندرتها — يظهر كشارة على الكرت */
+function prize_tier(int $qty): array
+{
+    if ($qty <= 5) return ['نادرة', 'fire'];
+    if ($qty <= 50) return ['مميزة', 'star'];
+    return ['هدية', 'gift'];
+}
+
 function log_activity(string $action, string $details = ''): void
 {
     q('INSERT INTO activity_log (admin_id, action, details, ip) VALUES (?, ?, ?, ?)', [

@@ -41,6 +41,7 @@ function admin_header(string $title, string $active): void
     $site = setting('site_name', 'تذكرة الحظ');
     $nav = [
         'dashboard' => ['index.php', 'الرئيسية', 'M3 12l9-8 9 8M5 10v10h14V10'],
+        'home'      => ['home.php', 'الواجهة الرئيسية', 'M3 5h18v10H3zM7 19h10M12 15v4'],
         'batches'   => ['batches.php', 'دفعات التذاكر', 'M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4z'],
         'tickets'   => ['tickets.php', 'البحث عن تذكرة', 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5'],
         'winners'   => ['winners.php', 'الرابحون', 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4'],

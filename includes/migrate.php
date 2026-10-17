@@ -6,7 +6,7 @@ declare(strict_types=1);
  * كل ترقية تزيد schema_version بواحد، ولا تُعاد أبداً.
  */
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 function column_exists(string $table, string $column): bool
 {
@@ -56,6 +56,31 @@ function run_migrations(): void
             $st = db()->prepare('INSERT IGNORE INTO settings (`key`, `value`) VALUES (?, ?)');
             foreach ($defaults as $k => $v) $st->execute([$k, $v]);
             save_setting('schema_version', '2');
+        }
+
+        if ($current < 3) {
+            // v3: بانرات الواجهة الرئيسية (شرائح متحركة يديرها الأدمين)
+            db()->exec(
+                "CREATE TABLE IF NOT EXISTS banners (
+                   id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+                   eyebrow VARCHAR(80) NULL,
+                   title1 VARCHAR(80) NOT NULL,
+                   title2 VARCHAR(80) NULL,
+                   body VARCHAR(240) NULL,
+                   image VARCHAR(255) NOT NULL,
+                   btn_text VARCHAR(40) NULL,
+                   sort SMALLINT NOT NULL DEFAULT 0,
+                   is_active TINYINT(1) NOT NULL DEFAULT 1,
+                   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+            );
+            if (!(int)q('SELECT COUNT(*) FROM banners')->fetchColumn()) {
+                $st = db()->prepare('INSERT INTO banners (eyebrow, title1, title2, body, image, btn_text, sort) VALUES (?, ?, ?, ?, ?, ?, ?)');
+                $st->execute(['اكشف · افرح · اربح', 'جرّب حظك', 'واكشف تذكرتك', 'في كل تذكرة مفاجأة تنتظرك. أدخل الرمز واكتشف إذا كنت من الرابحين!', 'art:hero-city.svg', 'اكشف تذكرتك', 1]);
+                $st->execute(['جوائز كل يوم', 'مهرجان', 'الجوائز الكبرى', 'دراجات وألعاب وهدايا مميزة بانتظار الأبطال. كل رمز فرصة جديدة للفوز.', 'art:hero-carnival.svg', 'جرّب الآن', 2]);
+                $st->execute(['مغامرة الحظ', 'انطلق', 'نحو الفوز', 'امسح رمز QR أو اكتب رمز تذكرتك، وخلّ المفاجأة تبدأ!', 'art:hero-space.svg', 'ابدأ المغامرة', 3]);
+            }
+            save_setting('schema_version', '3');
         }
     } finally {
         q("SELECT RELEASE_LOCK('kt_migrate')");
