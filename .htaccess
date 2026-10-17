@@ -3,7 +3,7 @@ DirectoryIndex index.php
 AddDefaultCharset UTF-8
 
 # منع الوصول للملفات الحساسة
-<FilesMatch "^(config\.php|config\.sample\.php|README\.md|\.env.*|.*\.sql|.*\.log)$">
+<FilesMatch "^(config\.php|config\.sample\.php|README\.md|\..*|.*\.sql|.*\.log)$">
   Require all denied
 </FilesMatch>
 
@@ -13,6 +13,7 @@ AddDefaultCharset UTF-8
   # RewriteCond %{HTTPS} off
   # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
   RewriteRule ^includes/ - [F,L]
+  RewriteRule (^|/)\.git(/|$) - [F,L]
 </IfModule>
 
 <IfModule mod_headers.c>

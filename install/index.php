@@ -39,12 +39,22 @@ if (!$installed && $_SERVER['REQUEST_METHOD'] === 'POST') {
     if (in_array(false, $checks, true)) $errors[] = 'بعض متطلبات السيرفر غير متوفرة (انظر القائمة).';
     if (!filter_var($f['base_url'], FILTER_VALIDATE_URL)) $errors[] = 'رابط الموقع غير صحيح.';
     if ($f['db_name'] === '' || $f['db_user'] === '') $errors[] = 'أكمل بيانات قاعدة البيانات.';
+    elseif (!preg_match('/^[A-Za-z0-9_]{1,64}$/', $f['db_name'])) $errors[] = 'اسم القاعدة: حروف إنجليزية وأرقام و _ فقط.';
     if ($f['admin_name'] === '' || !filter_var($f['admin_email'], FILTER_VALIDATE_EMAIL)) $errors[] = 'أكمل اسم وبريد المالك.';
     if (strlen($f['admin_pass']) < 10) $errors[] = 'كلمة مرور المالك 10 أحرف على الأقل.';
 
     if (!$errors) {
         try {
-            $pdo = new PDO(sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $f['db_host'], (int)$f['db_port'], $f['db_name']), $f['db_user'], $f['db_pass'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+            // نتصل بالسيرفر أولاً، وننشئ القاعدة إن لم تكن موجودة (يعمل محلياً مع XAMPP/Docker).
+            // على الاستضافة المشتركة غالباً لا توجد صلاحية CREATE DATABASE، فنكمل على القاعدة التي أنشأها المستخدم.
+            $opts = [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION];
+            $pdo = new PDO(sprintf('mysql:host=%s;port=%d;charset=utf8mb4', $f['db_host'], (int)$f['db_port']), $f['db_user'], $f['db_pass'], $opts);
+            try {
+                $pdo->exec('CREATE DATABASE IF NOT EXISTS `' . $f['db_name'] . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
+            } catch (PDOException $ignored) {
+                // لا صلاحية إنشاء — نفترض أن القاعدة موجودة
+            }
+            $pdo->exec('USE `' . $f['db_name'] . '`');
             $sql = file_get_contents(__DIR__ . '/schema.sql');
             $sql = preg_replace('/^\s*--.*$/m', '', $sql);
             foreach (array_filter(array_map('trim', explode(";\n", $sql))) as $stmt) {
@@ -124,7 +134,7 @@ if (!$installed && $_SERVER['REQUEST_METHOD'] === 'POST') {
         <label>اسم الموقع<input name="site_name" value="<?= $h($f['site_name']) ?>"></label>
       </div>
       <h2 class="form__section">قاعدة البيانات MySQL</h2>
-      <p class="muted small">من hPanel ← Databases ← MySQL Databases: أنشئ قاعدة ومستخدماً وانسخ بياناتهم هنا.</p>
+      <p class="muted small">على جهازك (XAMPP): المستخدم <code>root</code> وكلمة المرور فاضية، والقاعدة تُنشأ تلقائياً.<br>على Hostinger: hPanel ← Databases ← MySQL Databases: أنشئ قاعدة ومستخدماً وانسخ بياناتهم هنا.</p>
       <div class="form-grid">
         <label>Host<input name="db_host" dir="ltr" value="<?= $h($f['db_host']) ?>" required></label>
         <label>Port<input name="db_port" dir="ltr" value="<?= $h($f['db_port']) ?>"></label>

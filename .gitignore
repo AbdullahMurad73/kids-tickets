@@ -1,6 +1,7 @@
 # أسرار — لا تُرفع أبداً
 config.php
 .env
+.admin-login.txt
 
 # صور الجوائز المرفوعة
 uploads/*
