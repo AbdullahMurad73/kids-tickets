@@ -25,6 +25,13 @@ $winners = q(
       ORDER BY w.id DESC LIMIT 5"
 )->fetchAll();
 
+$remaining = (int)q(
+    "SELECT COALESCE(SUM(GREATEST(p.quantity - p.won_count, 0)), 0)
+       FROM prizes p JOIN batches b ON b.id = p.batch_id
+      WHERE b.status = 'active' AND (b.ends_at IS NULL OR b.ends_at > NOW())"
+)->fetchColumn();
+$winnersTotal = (int)q('SELECT COUNT(*) FROM winners WHERE child_name IS NOT NULL')->fetchColumn();
+
 $prefill = isset($_GET['c']) ? format_code(substr(normalize_code((string)$_GET['c']), 0, CODE_LENGTH)) : '';
 $support = preg_replace('/\D/', '', setting('support_whatsapp')) ?? '';
 
@@ -142,6 +149,27 @@ $howCards = [
     </div>
   </section>
 
+  <!-- ===== أرقام الحملة ===== -->
+  <section class="wrap stats" aria-label="أرقام الحملة">
+    <div class="stat"><?= icon('gift') ?><div><span class="stat__n"><?= number_format($remaining) ?></span><span class="stat__l">جائزة متبقية الآن</span></div></div>
+    <div class="stat"><?= icon('trophy') ?><div><span class="stat__n"><?= number_format($winnersTotal) ?></span><span class="stat__l">رابح حتى الآن</span></div></div>
+  </section>
+
+  <?php if ($winners): ?>
+  <!-- ===== شريط آخر الرابحين ===== -->
+  <div class="ticker" aria-label="آخر الرابحين">
+    <div class="ticker__track">
+      <?php for ($set = 0; $set < 2; $set++): ?>
+      <div class="ticker__set"<?= $set ? ' aria-hidden="true"' : '' ?>>
+        <?php foreach ($winners as $w): ?>
+        <span class="ticker__item"><?= icon('star') ?><b><?= e(first_name($w['child_name'])) ?></b> ربح <?= e($w['prize']) ?></span>
+        <?php endforeach; ?>
+      </div>
+      <?php endfor; ?>
+    </div>
+  </div>
+  <?php endif; ?>
+
   <!-- ===== جوائز الحملة ===== -->
   <section class="wrap section" id="prizes">
     <div class="section__head">
@@ -155,7 +183,7 @@ $howCards = [
         <?php foreach ($prizes as $p):
             $left = max(0, (int)$p['quantity'] - (int)$p['won_count']);
             [$tierLabel, $tierIcon] = prize_tier((int)$p['quantity']); ?>
-        <article class="pcard<?= $left === 0 ? ' is-out' : '' ?>">
+        <article class="pcard<?= $left === 0 ? ' is-out' : '' ?><?= $tierIcon === 'fire' && $left > 0 ? ' pcard--rare' : '' ?>">
           <img class="pcard__img" src="<?= e(prize_art_url($p['name'], $p['image'])) ?>" alt="" loading="lazy">
           <span class="pcard__badge" title="المتبقي"><?= $left > 0 ? '×' . number_format($left) : 'نفدت' ?></span>
           <div class="pcard__foot">
