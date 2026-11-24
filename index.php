@@ -2,7 +2,7 @@
 declare(strict_types=1);
 require __DIR__ . '/includes/bootstrap.php';
 
-$siteName = setting('site_name', 'تذكرة الحظ');
+$siteName = setting('site_name', 'أكوما مايند');
 $tagline  = setting('site_tagline', 'أدخل رمز تذكرتك واكتشف إذا ربحت!');
 $botOn    = bot_enabled();
 
@@ -88,7 +88,13 @@ $howCards = [
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= e(asset('assets/css/app.css')) ?>">
-<link rel="icon" href="<?= e(asset('assets/img/favicon.svg')) ?>" type="image/svg+xml">
+<link rel="icon" href="<?= e(asset('assets/img/favicon.png')) ?>" type="image/png">
+<link rel="apple-touch-icon" href="<?= e(asset('assets/img/favicon.png')) ?>">
+<meta property="og:type" content="website">
+<meta property="og:title" content="<?= e($siteName) ?> — اكشف تذكرتك">
+<meta property="og:description" content="<?= e($tagline) ?>">
+<meta property="og:image" content="<?= e(asset('assets/img/brand/logo-mark.png')) ?>">
+<meta name="twitter:card" content="summary">
 </head>
 <body>
 <div class="bg" aria-hidden="true"></div>
@@ -97,8 +103,7 @@ $howCards = [
 <header class="nav">
   <div class="wrap nav__inner">
     <a class="brand" href="./" aria-label="<?= e($siteName) ?>">
-      <svg class="brand__mark" viewBox="0 0 48 48" aria-hidden="true"><defs><linearGradient id="bm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c06bff"/><stop offset="1" stop-color="#4fd8ff"/></linearGradient></defs><ellipse cx="24" cy="25" rx="21" ry="7" fill="none" stroke="url(#bm)" stroke-width="3" transform="rotate(-18 24 25)"/><circle cx="24" cy="24" r="11" fill="url(#bm)"/><path d="M38 6l1.4 3.6L43 11l-3.6 1.4L38 16l-1.4-3.6L33 11l3.6-1.4z" fill="#d9a8ff"/></svg>
-      <span class="brand__text"><?php $parts = explode(' ', $siteName, 2); ?><?= e($parts[0]) ?><?php if (isset($parts[1])): ?> <b><?= e($parts[1]) ?></b><?php endif; ?></span>
+      <img class="brand__logo" src="<?= e(asset('assets/img/brand/logo-horizontal-dark.png')) ?>" alt="<?= e($siteName) ?>">
     </a>
 
     <nav class="nav__links" aria-label="القائمة">

@@ -21,7 +21,7 @@ $guessBase = ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'lo
 
 $f = array_merge([
     'base_url' => $guessBase, 'db_host' => 'localhost', 'db_port' => '3306', 'db_name' => '', 'db_user' => '', 'db_pass' => '',
-    'site_name' => 'تذكرة الحظ', 'admin_name' => '', 'admin_email' => '', 'admin_pass' => '',
+    'site_name' => 'أكوما مايند', 'admin_name' => '', 'admin_email' => '', 'admin_pass' => '',
     'tw_sid' => '', 'tw_token' => '', 'tw_verify' => '', 'tw_wa_from' => '', 'tw_sms_from' => '', 'tw_otp_channel' => 'sms',
 ], array_map(fn($v) => is_string($v) ? trim($v) : '', $_POST));
 
@@ -60,7 +60,7 @@ if (!$installed && $_SERVER['REQUEST_METHOD'] === 'POST') {
             foreach (array_filter(array_map('trim', explode(";\n", $sql))) as $stmt) {
                 $pdo->exec($stmt);
             }
-            $pdo->prepare('INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)')->execute(['site_name', $f['site_name'] ?: 'تذكرة الحظ']);
+            $pdo->prepare('INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)')->execute(['site_name', $f['site_name'] ?: 'أكوما مايند']);
             $exists = $pdo->prepare('SELECT 1 FROM admins WHERE email = ?');
             $exists->execute([strtolower($f['admin_email'])]);
             if (!$exists->fetchColumn()) {

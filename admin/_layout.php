@@ -38,7 +38,7 @@ function require_admin(bool $ownerOnly = false): array
 function admin_header(string $title, string $active): void
 {
     $a = current_admin();
-    $site = setting('site_name', 'تذكرة الحظ');
+    $site = setting('site_name', 'أكوما مايند');
     $nav = [
         'dashboard' => ['index.php', 'الرئيسية', 'M3 12l9-8 9 8M5 10v10h14V10'],
         'home'      => ['home.php', 'الواجهة الرئيسية', 'M3 5h18v10H3zM7 19h10M12 15v4'],

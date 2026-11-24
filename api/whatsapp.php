@@ -64,7 +64,7 @@ function reply(string $to, string $text, ?int $winnerId = null, ?string $media =
     twiml_reply($text, $media);
 }
 
-$site = setting('site_name', 'تذكرة الحظ');
+$site = setting('site_name', 'أكوما مايند');
 $code = normalize_code($text);
 $hasArabic = (bool)preg_match('/\p{Arabic}/u', $text);
 $looksLikeCode = !$hasArabic && strlen($code) >= 6 && strlen($code) <= 14;
