@@ -189,14 +189,12 @@ $howCards = [
             $left = max(0, (int)$p['quantity'] - (int)$p['won_count']);
             [$tierLabel, $tierIcon] = prize_tier((int)$p['quantity']); ?>
         <article class="pcard<?= $left === 0 ? ' is-out' : '' ?><?= $tierIcon === 'fire' && $left > 0 ? ' pcard--rare' : '' ?>">
-          <span class="pcard__corner pcard__corner--l" aria-hidden="true"><?= icon('sparkle') ?></span>
-          <span class="pcard__corner pcard__corner--r" aria-hidden="true"><?= icon($tierIcon) ?></span>
-          <div class="pcard__frame">
-            <img class="pcard__img" src="<?= e(prize_art_url($p['name'], $p['image'])) ?>" alt="" loading="lazy">
-            <span class="pcard__count" title="المتبقي"><?= $left > 0 ? '×' . number_format($left) : 'نفدت' ?></span>
+          <img class="pcard__img" src="<?= e(prize_art_url($p['name'], $p['image'])) ?>" alt="" loading="lazy">
+          <span class="pcard__badge" title="المتبقي"><?= $left > 0 ? '×' . number_format($left) : 'نفدت' ?></span>
+          <div class="pcard__foot">
+            <h3><?= e($p['name']) ?></h3>
+            <span class="chip chip--<?= e($tierIcon) ?>"><?= icon($tierIcon) ?><?= e($tierLabel) ?></span>
           </div>
-          <div class="pcard__plate"><h3><?= e($p['name']) ?></h3></div>
-          <div class="pcard__stars" aria-label="<?= e($tierLabel) ?>"><?php $rs = ['fire' => 5, 'star' => 3][$tierIcon] ?? 2; for ($s = 0; $s < $rs; $s++) echo icon('star'); ?></div>
         </article>
         <?php endforeach; ?>
       </div>
