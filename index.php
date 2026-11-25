@@ -178,8 +178,8 @@ $howCards = [
   <!-- ===== جوائز الحملة ===== -->
   <section class="wrap section" id="prizes">
     <div class="section__head">
-      <h2><?= icon('sparkle') ?>جوائز الحملة</h2>
-      <a href="#winners" class="view-all">عرض الرابحين <?= icon('chevL') ?></a>
+      <h2><?= icon('sparkle') ?>الأكثر طلباً هذا الأسبوع</h2>
+      <a href="#winners" class="view-all">عرض الكل <?= icon('chevL') ?></a>
     </div>
     <?php if ($prizes): ?>
     <div class="carousel">
@@ -223,7 +223,7 @@ $howCards = [
     <!-- ===== آخر الرابحين ===== -->
     <section class="section panel" id="winners">
       <div class="section__head">
-        <h2><?= icon('fire') ?><?= $winners ? 'آخر الرابحين' : 'أبرز الجوائز' ?></h2>
+        <h2><?= icon('fire') ?><?= $winners ? 'الرابحون الآن' : 'أبرز الجوائز' ?></h2>
         <a href="#prizes" class="view-all">الكل <?= icon('chevL') ?></a>
       </div>
       <ol class="rank">
