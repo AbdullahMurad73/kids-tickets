@@ -99,6 +99,11 @@ public_head('تحديات وجوائز للأبطال', $tagline);
         <span class="hero__shadow"></span>
         <span class="hero__jump"><img src="<?= e(media_slot_url('mascot')) ?>" alt=""><i class="hero__wand"></i></span>
       </div>
+      <div class="floaters" aria-hidden="true">
+        <?= cube3d(['؟', '★', '!', '؟', '✦', '★'], 'cube3d--a') ?>
+        <?= cube3d(['★', '؟', '✦', '!', '★', '؟'], 'cube3d--b') ?>
+        <?= coin3d('★', '+10', 'gold') ?>
+      </div>
       <?php if (count($banners) > 1): ?>
       <div class="hero__dots" role="tablist" aria-label="البانرات">
         <?php foreach ($banners as $i => $b): ?><button type="button" role="tab" class="<?= $i === 0 ? 'on' : '' ?>" data-slide="<?= $i ?>" aria-label="بانر <?= $i + 1 ?>"></button><?php endforeach; ?>
@@ -142,7 +147,7 @@ public_head('تحديات وجوائز للأبطال', $tagline);
           $seats = max(0, (int)$lv['winners_limit'] - $taken);
           $mine = $player && (int)$player['points'] >= (int)$lv['min_points']; ?>
       <article class="lvl lvl--<?= e($tint) ?> reveal<?= $mine ? ' is-mine' : '' ?>" style="--i:<?= $i ?>" data-tilt>
-        <span class="lvl__step"><?= $i + 1 ?></span>
+        <?= coin3d((string)($i + 1), '★', $tint) ?>
         <img class="lvl__img" src="<?= e(media_slot_url('level_' . min(3, $i + 1))) ?>" alt="" loading="lazy">
         <h3 class="lvl__name">المستوى <?= e($lv['name']) ?></h3>
         <p class="lvl__prize"><?= e($lv['prize']) ?></p>
@@ -169,12 +174,23 @@ public_head('تحديات وجوائز للأبطال', $tagline);
         <?php foreach ($prizes as $p):
             $left = max(0, (int)$p['quantity'] - (int)$p['won_count']);
             [$tierLabel, $tierIcon] = prize_tier((int)$p['quantity']); ?>
-        <article class="pcard<?= $left === 0 ? ' is-out' : '' ?><?= $tierIcon === 'fire' && $left > 0 ? ' pcard--rare' : '' ?>" data-tilt>
-          <img class="pcard__img" src="<?= e(prize_art_url($p['name'], $p['image'])) ?>" alt="" loading="lazy">
-          <span class="pcard__badge" title="المتبقي"><?= $left > 0 ? '×' . number_format($left) : 'نفدت' ?></span>
-          <div class="pcard__foot">
-            <h3><?= e($p['name']) ?></h3>
-            <span class="chip chip--<?= e($tierIcon) ?>"><?= icon($tierIcon) ?><?= e($tierLabel) ?></span>
+        <article class="pcard flip<?= $left === 0 ? ' is-out' : '' ?><?= $tierIcon === 'fire' && $left > 0 ? ' pcard--rare' : '' ?>" data-tilt tabindex="0" role="button" aria-label="<?= e($p['name']) ?>: اقلب البطاقة للتفاصيل">
+          <div class="flip__inner">
+            <div class="flip__face flip__face--front">
+              <img class="pcard__img" src="<?= e(prize_art_url($p['name'], $p['image'])) ?>" alt="" loading="lazy">
+              <span class="pcard__badge" title="المتبقي"><?= $left > 0 ? '×' . number_format($left) : 'نفدت' ?></span>
+              <div class="pcard__foot">
+                <h3><?= e($p['name']) ?></h3>
+                <span class="chip chip--<?= e($tierIcon) ?>"><?= icon($tierIcon) ?><?= e($tierLabel) ?></span>
+              </div>
+            </div>
+            <div class="flip__face flip__face--back">
+              <strong><?= e($p['name']) ?></strong>
+              <span class="flip__big"><?= number_format($left) ?></span>
+              <span>متبقية من <?= number_format((int)$p['quantity']) ?></span>
+              <span class="flip__bar"><i style="width:<?= (int)round(100 * $left / max(1, (int)$p['quantity'])) ?>%"></i></span>
+              <small>اكشف رمز تذكرتك، وكل رمز صحيح يعطيك <?= (int)setting('points_ticket', '50') ?> نقطة</small>
+            </div>
           </div>
         </article>
         <?php endforeach; ?>
@@ -207,10 +223,22 @@ public_head('تحديات وجوائز للأبطال', $tagline);
         <h2><?= icon('fire') ?>المتصدرون الآن</h2>
         <a href="play.php" class="view-all">نافسهم <?= icon('chevL') ?></a>
       </div>
-      <ol class="rank">
-        <?php if ($leaders): foreach (array_slice($leaders, 0, 5) as $i => $l): ?>
+      <?php if ($leaders): $podium = array_slice($leaders, 0, 3); ?>
+      <div class="podium" aria-label="أول ثلاثة">
+        <?php foreach ([1, 0, 2] as $pos): if (!isset($podium[$pos])) continue; $l = $podium[$pos]; ?>
+        <div class="podium__col podium__col--<?= $pos + 1 ?> reveal" style="--i:<?= $pos ?>">
+          <img class="podium__av" src="<?= e(avatar_url($l['avatar'])) ?>" alt="">
+          <strong><?= e(first_name($l['full_name'])) ?></strong>
+          <span class="podium__pts"><?= icon('star') ?><?= number_format((int)$l['points']) ?></span>
+          <div class="podium__block"><span class="podium__top"></span><span class="podium__front"><?= $pos + 1 ?></span><span class="podium__side"></span></div>
+        </div>
+        <?php endforeach; ?>
+      </div>
+      <?php endif; ?>
+      <ol class="rank" start="4">
+        <?php if ($leaders): foreach (array_slice($leaders, 3, 5) as $i => $l): ?>
         <li class="reveal" style="--i:<?= $i ?>">
-          <span class="rank__n"><?= $i + 1 ?></span>
+          <span class="rank__n"><?= $i + 4 ?></span>
           <img class="rank__thumb rank__thumb--round" src="<?= e(avatar_url($l['avatar'])) ?>" alt="" loading="lazy">
           <span class="rank__body"><strong><?= e(first_name($l['full_name'])) ?></strong><small>المستوى <?= e(level_name_for((int)$l['points'])) ?></small></span>
           <span class="rank__meta rank__meta--star"><?= icon('star') ?><?= number_format((int)$l['points']) ?></span>
@@ -236,6 +264,7 @@ public_head('تحديات وجوائز للأبطال', $tagline);
   <section class="wrap">
     <div class="cta reveal">
       <img class="cta__mascot" src="<?= e(media_slot_url('mascot')) ?>" alt="">
+      <?= cube3d(['؟', '★', '!', '✦', '؟', '★'], 'cube3d--cta') ?>
       <div class="cta__text">
         <h2>تحدي اليوم ينتظرك!</h2>
         <p><?= daily_limit() ?> أسئلة، <?= (int)setting('question_seconds', '20') ?> ثانية لكل سؤال، ونقاط تقرّبك من الجائزة الذهبية.</p>

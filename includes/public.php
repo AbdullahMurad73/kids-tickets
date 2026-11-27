@@ -138,3 +138,23 @@ function public_footer(): void
 </footer>
 <?php
 }
+
+/** مكعب ثلاثي الأبعاد بستة وجوه (CSS) */
+function cube3d(array $faces, string $mod = ''): string
+{
+    $names = ['front', 'back', 'right', 'left', 'top', 'bottom'];
+    $h = '<div class="cube3d' . ($mod ? ' ' . e($mod) : '') . '" aria-hidden="true"><div class="cube3d__body">';
+    foreach ($names as $i => $n) {
+        $h .= '<span class="cube3d__f cube3d__f--' . $n . '">' . e($faces[$i % count($faces)]) . '</span>';
+    }
+    return $h . '</div></div>';
+}
+
+/** عملة/ميدالية ثلاثية الأبعاد بوجهين وحافة */
+function coin3d(string $front, string $back, string $tint): string
+{
+    $edge = '';
+    for ($i = 1; $i <= 8; $i++) $edge .= '<i style="--z:' . $i . '"></i>';
+    return '<div class="coin3d coin3d--' . e($tint) . '" aria-hidden="true"><div class="coin3d__body">' . $edge
+        . '<span class="coin3d__face">' . e($front) . '</span><span class="coin3d__face coin3d__face--back">' . e($back) . '</span></div></div>';
+}

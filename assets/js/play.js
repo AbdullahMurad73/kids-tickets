@@ -90,6 +90,7 @@
     if (!d.ok) { if (d.auth) location.reload(); return showDone(d.message || 'حدث خطأ.'); }
     if (d.done) { renderMe(d.player); return showDone(d.message); }
     const q = d.question;
+    quiz.classList.remove('is-enter'); void quiz.offsetWidth; quiz.classList.add('is-enter');
     $('[data-count]').textContent = `سؤال ${q.n} من ${q.of}`;
     $('[data-cat]').textContent = q.category;
     $('[data-q]').textContent = q.body;
@@ -131,6 +132,7 @@
       const right = btns.find((b) => b.dataset.k === d.answer);
       if (right) { const r = right.getBoundingClientRect(); fx().burst(r.left + r.width / 2, r.top + r.height / 2, 34); }
       floatPts(d.points + (d.streak_bonus || 0));
+      if (fx().coinPop) fx().coinPop(quiz, '+' + (d.points + (d.streak_bonus || 0)));
       fx().bumpPoints(d.points + (d.streak_bonus || 0));
     }
     let msg = d.correct ? `إجابة صحيحة! +${d.points} نقطة` : (d.timeout ? 'خلص الوقت! ⏰' : 'إجابة غلط، المرة الجاية أحسن 💪');

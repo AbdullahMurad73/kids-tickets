@@ -179,5 +179,44 @@
     el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
   }
 
-  window.KTfx = { burst, fireworks, bumpPoints, countUp };
+
+  /* ---------- قلب بطاقات الجوائز ثلاثياً ---------- */
+  document.querySelectorAll('.flip').forEach((card) => {
+    const toggle = () => card.classList.toggle('is-flipped');
+    card.addEventListener('click', toggle);
+    card.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
+  });
+
+  /* ---------- عمق البانر مع حركة الماوس أو ميلان الجوال ---------- */
+  const heroBox = $('#hero');
+  if (heroBox && !reduce) {
+    const set = (x, y) => { heroBox.style.setProperty('--px', x.toFixed(3)); heroBox.style.setProperty('--py', y.toFixed(3)); };
+    heroBox.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      const r = heroBox.getBoundingClientRect();
+      set((e.clientX - r.left) / r.width - 0.5, (e.clientY - r.top) / r.height - 0.5);
+    });
+    heroBox.addEventListener('pointerleave', () => set(0, 0));
+    if (matchMedia('(hover: none)').matches && 'DeviceOrientationEvent' in window && typeof DeviceOrientationEvent.requestPermission !== 'function') {
+      addEventListener('deviceorientation', (e) => {
+        if (e.gamma == null) return;
+        set(Math.max(-0.5, Math.min(0.5, e.gamma / 60)), Math.max(-0.5, Math.min(0.5, (e.beta - 45) / 90)));
+      });
+    }
+  }
+
+  /* ---------- عملة ثلاثية تطير عند كسب النقاط ---------- */
+  function coinPop(host, label) {
+    if (reduce || !host) return;
+    const c = document.createElement('div');
+    c.className = 'coin3d coinpop';
+    let edge = '';
+    for (let i = 1; i <= 8; i++) edge += `<i style="--z:${i}"></i>`;
+    c.innerHTML = `<div class="coin3d__body">${edge}<span class="coin3d__face"></span><span class="coin3d__face coin3d__face--back">★</span></div>`;
+    c.querySelector('.coin3d__face').textContent = label;
+    host.appendChild(c);
+    setTimeout(() => c.remove(), 1500);
+  }
+
+  window.KTfx = { burst, fireworks, bumpPoints, countUp, coinPop };
 })();

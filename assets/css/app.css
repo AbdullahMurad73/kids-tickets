@@ -515,3 +515,122 @@ html.intro-on body{overflow:hidden}
 .intro__logo{width:min(460px,82vw);filter:drop-shadow(0 16px 34px rgba(192,132,252,.55));animation:hop 1.3s 1s ease-in-out infinite}
 button.view-all{border:0;background:none;padding:0;cursor:pointer}
 [hidden]{display:none!important}
+
+/* =====================================================================
+   طبقة الأبعاد الثلاثية (3D)
+   ===================================================================== */
+
+/* مكعبات عائمة تدور */
+.floaters{position:absolute;inset:0;z-index:2;pointer-events:none;perspective:700px}
+.cube3d{--s:46px;position:absolute;width:var(--s);height:var(--s);perspective:600px;animation:floatY 6s ease-in-out infinite}
+.cube3d__body{position:relative;width:100%;height:100%;transform-style:preserve-3d;animation:spin3d 14s linear infinite}
+.cube3d__f{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:calc(var(--s) * .5);color:#fff;border-radius:10px;background:linear-gradient(135deg,rgba(192,132,252,.9),rgba(106,92,255,.85));border:2px solid rgba(255,255,255,.35);box-shadow:inset 0 0 14px rgba(255,255,255,.25);backface-visibility:visible}
+.cube3d__f--front{transform:translateZ(calc(var(--s) / 2))}
+.cube3d__f--back{transform:rotateY(180deg) translateZ(calc(var(--s) / 2))}
+.cube3d__f--right{transform:rotateY(90deg) translateZ(calc(var(--s) / 2));background:linear-gradient(135deg,#ff7ad0,#a855f7)}
+.cube3d__f--left{transform:rotateY(-90deg) translateZ(calc(var(--s) / 2));background:linear-gradient(135deg,#4fc3ff,#6a5cff)}
+.cube3d__f--top{transform:rotateX(90deg) translateZ(calc(var(--s) / 2));background:linear-gradient(135deg,#ffe27a,#ffb020);color:#3a1d00}
+.cube3d__f--bottom{transform:rotateX(-90deg) translateZ(calc(var(--s) / 2))}
+.cube3d--a{top:12%;inset-inline-start:42%;--s:40px}
+.cube3d--b{bottom:16%;inset-inline-start:30%;--s:30px;animation-delay:-2s}
+.cube3d--b .cube3d__body{animation-duration:10s;animation-direction:reverse}
+.cube3d--cta{position:relative;flex:none;--s:54px;margin-inline:6px}
+@keyframes spin3d{from{transform:rotateX(-20deg) rotateY(0)}to{transform:rotateX(-20deg) rotateY(360deg)}}
+@keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+
+/* عملة/ميدالية ثلاثية الأبعاد */
+.coin3d{--d:56px;--c1:#ffe27a;--c2:#e6a417;--edge:#b9800c;width:var(--d);height:var(--d);perspective:500px}
+.coin3d--silver{--c1:#ffffff;--c2:#b9c4dc;--edge:#8794b0}
+.coin3d--bronze{--c1:#ffc99a;--c2:#c87a3d;--edge:#94531f}
+.coin3d__body{position:relative;width:100%;height:100%;transform-style:preserve-3d;animation:coinSpin 5s ease-in-out infinite}
+.coin3d__body i{position:absolute;inset:0;border-radius:50%;background:var(--edge);transform:translateZ(calc((var(--z) - 4.5) * 1px))}
+.coin3d__face{position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:calc(var(--d) * .42);color:#3a2300;background:radial-gradient(circle at 35% 30%,var(--c1),var(--c2) 70%);box-shadow:inset 0 0 0 4px rgba(255,255,255,.35),inset 0 -6px 10px rgba(0,0,0,.2);transform:translateZ(5px);backface-visibility:hidden}
+.coin3d__face--back{transform:rotateY(180deg) translateZ(5px)}
+@keyframes coinSpin{0%,20%{transform:rotateY(0)}50%,70%{transform:rotateY(180deg)}100%{transform:rotateY(360deg)}}
+.lvl .coin3d{position:absolute;top:-28px;--d:58px;filter:drop-shadow(0 8px 14px rgba(0,0,0,.5))}
+.lvl:hover .coin3d__body{animation-duration:1.2s}
+.floaters .coin3d{position:absolute;top:20%;inset-inline-start:22%;--d:44px;animation:floatY 5s -1s ease-in-out infinite}
+
+/* بطاقات الجوائز تنقلب ثلاثياً */
+.pcard.flip{overflow:visible;background:none;border:0;cursor:pointer;perspective:1000px}
+.pcard.flip::after{display:none}
+.pcard.flip::before{border-radius:18px;z-index:3}
+.flip__inner{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.3,1.3,.5,1)}
+.flip.is-flipped .flip__inner{transform:rotateY(180deg)}
+.flip__face{position:absolute;inset:0;border-radius:18px;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden;border:1px solid var(--line-2);background:var(--panel)}
+.flip__face--front::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(8,5,24,.92) 0%,rgba(8,5,24,.35) 45%,transparent 70%)}
+.flip__face--back{transform:rotateY(180deg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:16px;text-align:center;background:radial-gradient(120% 90% at 50% 0%,rgba(168,85,247,.35),transparent 60%),linear-gradient(180deg,#22176a,#130c38)}
+.flip__face--back strong{font-size:1.1rem}
+.flip__big{font-family:var(--display);font-size:2.6rem;line-height:1;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.flip__bar{width:80%;height:8px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}
+.flip__bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#a855f7,#ffd45a)}
+.flip__face--back small{color:var(--ink-2)}
+.pcard.flip .pcard__badge,.pcard.flip .pcard__foot{z-index:2}
+.pcard.flip:focus-visible{outline:3px solid var(--violet-2);outline-offset:3px;border-radius:18px}
+
+/* منصة التتويج ثلاثية الأبعاد */
+.podium{display:grid;grid-template-columns:1fr 1fr 1fr;align-items:end;gap:10px;margin:8px 0 14px;perspective:800px}
+.podium__col{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}
+.podium__col strong{font-size:.95rem;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.podium__av{width:54px;height:54px;border-radius:50%;border:3px solid var(--pc,#ffd45a);background:#21185a;animation:floatY 3s ease-in-out infinite}
+.podium__col--1 .podium__av{width:66px;height:66px}
+.podium__pts{display:inline-flex;align-items:center;gap:3px;font-size:.82rem;color:var(--ink-2)}
+.podium__pts .i{width:13px;height:13px;color:#ffc24d}
+.podium__block{position:relative;width:100%;height:var(--ph,70px);margin-top:6px;transform-style:preserve-3d;transform:rotateX(14deg)}
+.podium__front{position:absolute;inset:0;display:grid;place-items:center;border-radius:6px 6px 0 0;font-family:var(--display);font-weight:800;font-size:1.8rem;color:#2a1300;background:linear-gradient(180deg,var(--pc),var(--pc2))}
+.podium__top{position:absolute;left:0;right:0;top:0;height:22px;border-radius:6px;transform-origin:top;transform:rotateX(90deg);background:var(--pc);filter:brightness(1.2)}
+.podium__side{position:absolute;top:0;bottom:0;inset-inline-end:-10px;width:10px;background:var(--pc2);filter:brightness(.7);transform-origin:left;transform:skewY(-30deg)}
+.podium__col--1{--pc:#ffd45a;--pc2:#e6a417;--ph:96px}
+.podium__col--2{--pc:#eef2fb;--pc2:#aab6d0;--ph:72px}
+.podium__col--3{--pc:#ffbf8a;--pc2:#c87a3d;--ph:56px}
+
+/* البانر: عمق ثلاثي يتبع الماوس */
+.hero{transform-style:preserve-3d}
+.hero__art{transition:transform .25s ease-out;transform:translate3d(calc(var(--px,0) * -16px),calc(var(--py,0) * -10px),0) scale(1.05)}
+.hero__text{transition:transform .25s ease-out;transform:translate3d(calc(var(--px,0) * 10px),calc(var(--py,0) * 6px),0)}
+.hero__hopper{transition:transform .25s ease-out;transform:translate3d(calc(var(--px,0) * 26px),calc(var(--py,0) * 16px),0)}
+.floaters{transition:transform .3s ease-out;transform:translate3d(calc(var(--px,0) * 34px),calc(var(--py,0) * 22px),0)}
+
+/* بطاقات كيف تلعب ثلاثية عند المرور */
+.how-grid{perspective:900px}
+.hcard{transform-style:preserve-3d;transition:transform .35s cubic-bezier(.2,.8,.2,1),box-shadow .35s}
+.hcard:hover{transform:rotateX(8deg) rotateY(-6deg) translateZ(10px)}
+.hcard__text{transform:translateZ(24px)}
+
+/* الأرقام: تطفو بعمق */
+.stats--4{perspective:900px}
+.stat{transition:transform .35s}
+.stat:hover{transform:rotateX(10deg) translateY(-4px)}
+
+/* صفحة التحدي: السؤال يدخل بانقلاب ثلاثي */
+.quiz{perspective:1200px}
+.quiz.is-enter .quiz__q,.quiz.is-enter .opts{animation:qIn .55s cubic-bezier(.2,1.2,.4,1) both}
+.quiz.is-enter .opts{animation-delay:.08s}
+@keyframes qIn{from{opacity:0;transform:rotateX(-70deg) translateY(-20px)}to{opacity:1;transform:none}}
+.opts{perspective:800px}
+.opt{transform-style:preserve-3d;box-shadow:0 6px 0 rgba(0,0,0,.35)}
+.opt:hover:not([disabled]){transform:translateY(-3px) rotateX(8deg);box-shadow:0 9px 0 rgba(0,0,0,.35)}
+.opt:active:not([disabled]){transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.35)}
+.opt.is-right{animation:rightPop .5s cubic-bezier(.3,1.6,.5,1)}
+@keyframes rightPop{50%{transform:scale(1.05) rotateX(-12deg)}}
+.coinpop{position:absolute;top:36%;left:50%;--d:64px;transform:translateX(-50%);pointer-events:none;animation:coinUp 1.4s ease-out forwards}
+.coinpop .coin3d__body{animation:coinSpinFast .7s linear infinite}
+@keyframes coinUp{to{transform:translate(-50%,-120px);opacity:0}}
+@keyframes coinSpinFast{to{transform:rotateY(360deg)}}
+
+/* صندوق المفاجأة يدور ثلاثياً */
+.stage--suspense{perspective:600px}
+.giftbox{animation:boxTurn 1.4s ease-in-out infinite;transform-style:preserve-3d}
+@keyframes boxTurn{0%,100%{transform:rotateY(-25deg) rotateX(8deg)}50%{transform:rotateY(25deg) rotateX(-6deg) scale(1.06)}}
+
+@media (max-width:640px){
+  .cube3d--a{top:auto;bottom:34%;inset-inline-start:8%;--s:30px}
+  .cube3d--b,.floaters .coin3d{display:none}
+  .podium__av{width:44px;height:44px}
+  .podium__col--1 .podium__av{width:54px;height:54px}
+}
+@media (prefers-reduced-motion:reduce){.hero__art,.hero__text,.hero__hopper,.floaters{transform:none!important}}
+.cube3d--a{inset-inline-start:auto;inset-inline-end:34%;top:12%}
+.cube3d--b{inset-inline-start:auto;inset-inline-end:24%;bottom:14%}
+.floaters .coin3d{inset-inline-start:auto;inset-inline-end:12%;top:16%}
+@media (max-width:640px){.cube3d--a{inset-inline-end:auto;inset-inline-start:auto;left:auto;right:auto;top:18px;inset-inline-start:40%;bottom:auto}}
