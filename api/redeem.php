@@ -12,4 +12,12 @@ if ($res['result'] === 'win') {
     unset($res['winner_id']);
     $res['otp'] = otp_enabled();
 }
+// كل تذكرة صحيحة تعطي المتسابق المسجّل نقاطاً (رابحة أو لا)
+if (in_array($res['result'], ['win', 'lose'], true) && ($pl = current_player())) {
+    $pts = max(0, (int)setting('points_ticket', '50'));
+    if ($pts > 0) {
+        $res['levels'] = array_map(fn($l) => ['name' => $l['name'], 'prize' => $l['prize'], 'rank' => $l['rank']], award_points((int)$pl['id'], $pts, 'ticket', normalize_code((string)($_POST['code'] ?? ''))));
+        $res['points_added'] = $pts;
+    }
+}
 json_out($res, $res['result'] === 'error' ? 500 : 200);

@@ -69,6 +69,13 @@
     }
     input.value = '';
     if (navInput) navInput.value = '';
+    modal.querySelectorAll('[data-pts]').forEach((el) => {
+      el.hidden = !data.points_added;
+      if (data.points_added) {
+        el.textContent = `+${data.points_added} نقطة أُضيفت لرصيدك` + (data.levels && data.levels.length ? ` · وصلت المستوى ${data.levels[data.levels.length - 1].name}! 🏅` : '');
+      }
+    });
+    if (window.KTfx && data.points_added) window.KTfx.bumpPoints(data.points_added);
     if (data.result === 'win') return showWin(data);
     if (data.result === 'lose') return showStage('lose');
     $('#errorMsg').textContent = data.message || 'حدث خطأ، حاول مرة أخرى.';

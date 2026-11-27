@@ -35,5 +35,7 @@ require APP_ROOT . '/includes/helpers.php';
 require APP_ROOT . '/includes/twilio.php';
 require APP_ROOT . '/includes/migrate.php';
 require APP_ROOT . '/includes/tickets.php';
+require APP_ROOT . '/includes/game.php';
+require APP_ROOT . '/includes/media.php';
 
 run_migrations();

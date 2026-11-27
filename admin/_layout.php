@@ -42,6 +42,10 @@ function admin_header(string $title, string $active): void
     $nav = [
         'dashboard' => ['index.php', 'الرئيسية', 'M3 12l9-8 9 8M5 10v10h14V10'],
         'home'      => ['home.php', 'الواجهة الرئيسية', 'M3 5h18v10H3zM7 19h10M12 15v4'],
+        'media'     => ['media.php', 'الصور والمظهر', 'M4 5h16v14H4zM4 15l5-5 4 4 3-3 4 4M15 9h.01'],
+        'players'   => ['players.php', 'المتسابقون', 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z'],
+        'levels'    => ['levels.php', 'المستويات والنقاط', 'M12 15a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM8.2 13.9L7 22l5-3 5 3-1.2-8.1'],
+        'questions' => ['questions.php', 'بنك الأسئلة', 'M9 9a3 3 0 1 1 4 2.8c-.6.3-1 .9-1 1.6V14M12 18h.01M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z'],
         'batches'   => ['batches.php', 'دفعات التذاكر', 'M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 0 0-4z'],
         'tickets'   => ['tickets.php', 'البحث عن تذكرة', 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5-5'],
         'winners'   => ['winners.php', 'الرابحون', 'M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4'],

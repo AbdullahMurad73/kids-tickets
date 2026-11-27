@@ -1,14 +1,16 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/includes/bootstrap.php';
+require __DIR__ . '/includes/public.php';
 
 $siteName = setting('site_name', 'أكوما مايند');
-$tagline  = setting('site_tagline', 'أدخل رمز تذكرتك واكتشف إذا ربحت!');
+$tagline  = setting('site_tagline', 'تحديات يومية وأسئلة ممتعة ومستويات وجوائز للأبطال!');
 $botOn    = bot_enabled();
+$player   = current_player();
 
 $banners = q('SELECT * FROM banners WHERE is_active = 1 ORDER BY sort, id')->fetchAll();
 if (!$banners) {
-    $banners = [['eyebrow' => 'اكشف · افرح · اربح', 'title1' => 'جرّب حظك', 'title2' => 'واكشف تذكرتك', 'body' => $tagline, 'image' => 'art:hero-city.svg', 'btn_text' => 'اكشف تذكرتك']];
+    $banners = [['eyebrow' => 'تحدَّ · اجمع · اربح', 'title1' => 'كن بطل', 'title2' => 'أكوما مايند', 'body' => $tagline, 'image' => 'art:hero-city.svg', 'btn_text' => 'ابدأ التحدي']];
 }
 
 $prizes = q(
@@ -19,113 +21,60 @@ $prizes = q(
 )->fetchAll();
 
 $winners = q(
-    "SELECT w.child_name, w.created_at, p.name AS prize, p.image
+    "SELECT w.child_name, w.created_at, p.name AS prize
        FROM winners w JOIN tickets t ON t.id = w.ticket_id JOIN prizes p ON p.id = t.prize_id
-      WHERE w.child_name IS NOT NULL
-      ORDER BY w.id DESC LIMIT 5"
+      WHERE w.child_name IS NOT NULL ORDER BY w.id DESC LIMIT 8"
 )->fetchAll();
 
-$remaining = (int)q(
-    "SELECT COALESCE(SUM(GREATEST(p.quantity - p.won_count, 0)), 0)
-       FROM prizes p JOIN batches b ON b.id = p.batch_id
-      WHERE b.status = 'active' AND (b.ends_at IS NULL OR b.ends_at > NOW())"
-)->fetchColumn();
-$winnersTotal = (int)q('SELECT COUNT(*) FROM winners WHERE child_name IS NOT NULL')->fetchColumn();
+$levels = levels_all();
+$reachedCounts = [];
+foreach (q('SELECT level_id, COUNT(*) n FROM level_progress GROUP BY level_id')->fetchAll() as $r) $reachedCounts[(int)$r['level_id']] = (int)$r['n'];
+$leaders = leaderboard(10);
+
+$stats = [
+    ['user',   (int)q('SELECT COUNT(*) FROM players')->fetchColumn(), 'بطل مشترك'],
+    ['brain',  (int)q('SELECT COUNT(*) FROM answers')->fetchColumn(), 'إجابة حتى الآن'],
+    ['gift',   (int)q("SELECT COALESCE(SUM(GREATEST(p.quantity - p.won_count, 0)), 0) FROM prizes p JOIN batches b ON b.id = p.batch_id WHERE b.status = 'active' AND (b.ends_at IS NULL OR b.ends_at > NOW())")->fetchColumn(), 'جائزة متبقية'],
+    ['trophy', (int)q('SELECT COUNT(*) FROM winners WHERE child_name IS NOT NULL')->fetchColumn() + array_sum($reachedCounts), 'فوز ومستوى محقق'],
+];
 
 $prefill = isset($_GET['c']) ? format_code(substr(normalize_code((string)$_GET['c']), 0, CODE_LENGTH)) : '';
-$support = preg_replace('/\D/', '', setting('support_whatsapp')) ?? '';
-
-function time_ago_ar(string $dt): string
-{
-    $d = max(0, time() - strtotime($dt));
-    if ($d < 3600) return 'قبل ' . max(1, intdiv($d, 60)) . ' د';
-    if ($d < 86400) return 'قبل ' . intdiv($d, 3600) . ' س';
-    return 'قبل ' . intdiv($d, 86400) . ' يوم';
-}
-
-function icon(string $name): string
-{
-    $p = [
-        'home'    => '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h5v-6h4v6h5V10"/>',
-        'gift'    => '<rect x="3" y="8" width="18" height="13" rx="2"/><path d="M3 12h18M12 8v13"/><path d="M12 8S10.5 3 7.5 3a2.5 2.5 0 0 0 0 5zM12 8s1.5-5 4.5-5a2.5 2.5 0 0 1 0 5z"/>',
-        'grid'    => '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
-        'trophy'  => '<path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/>',
-        'chat'    => '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
-        'ticket'  => '<path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/><path d="M14 6v12" stroke-dasharray="2 2"/>',
-        'search'  => '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/>',
-        'play'    => '<path d="M7 4.5v15l13-7.5z" fill="currentColor"/>',
-        'plus'    => '<path d="M12 5v14M5 12h14"/>',
-        'qr'      => '<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h2v2h-2zM18 14h2v2h-2zM14 18h2v2h-2zM18 18h2v2h-2z"/>',
-        'chevL'   => '<path d="M15 6l-6 6 6 6"/>',
-        'chevR'   => '<path d="M9 6l6 6-6 6"/>',
-        'arrowL'  => '<path d="M19 12H5M11 6l-6 6 6 6"/>',
-        'sparkle' => '<path d="M12 2l2.2 6.3L20 10l-5.8 1.7L12 18l-2.2-6.3L4 10l5.8-1.7zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z" fill="currentColor" stroke="none"/>',
-        'fire'    => '<path d="M12 2c1 4 6 6 6 11a6 6 0 0 1-12 0c0-2.5 1.2-4 2.5-5 0 2 1 3.5 2.5 3.5 0-4-1-6.5 1-9.5z" fill="currentColor" stroke="none"/>',
-        'star'    => '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" fill="currentColor" stroke="none"/>',
-        'clock'   => '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-        'whatsapp'=> '<path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2z" fill="currentColor" stroke="none"/>',
-    ];
-    return '<svg class="i" viewBox="0 0 24 24" aria-hidden="true">' . ($p[$name] ?? '') . '</svg>';
-}
 
 $howCards = [
-    ['card-get.svg',    'احصل على تذكرة', 'كل تذكرة فيها رمز سري خاص بك', 'violet', 'scroll:#prizes'],
-    ['card-enter.svg',  'أدخل الرمز',     $botOn ? 'اكتبه هنا، امسح QR، أو أرسله واتساب' : 'اكتبه هنا أو امسح رمز QR', 'pink', 'enter'],
-    ['card-reveal.svg', 'اكشف النتيجة',   'افتح صندوق المفاجأة واعرف حظك', 'sky', 'enter'],
-    ['card-claim.svg',  'استلم جائزتك',   'نرسل التفاصيل لولي أمرك على واتساب', 'teal', 'scroll:#winners'],
+    ['how_1', 'سجّل مرة وحدة', 'اسمك الرباعي وجوال ولي أمرك', 'violet'],
+    ['how_2', 'جاوب تحدي اليوم', 'أسئلة ممتعة كل يوم، مجاناً', 'pink'],
+    ['how_3', 'اجمع النقاط', 'إجابة صحيحة + سرعة + أيام متتالية', 'sky'],
+    ['how_4', 'اصعد واربح', 'برونزي ثم فضي ثم الذهبي الكبير', 'teal'],
 ];
+
+$faq = [
+    ['هل المشاركة مجانية؟', 'نعم. التسجيل والتحديات اليومية مجانية بالكامل، ولا يلزم أي شراء للوصول لأي مستوى أو للفوز بأي جائزة.'],
+    ['كيف أفوز بالجائزة الذهبية؟', 'تجمع النقاط من الإجابات الصحيحة وسرعة الإجابة والدخول اليومي. أول من يصل حد المستوى الذهبي يفوز بحسب عدد الجوائز المعلن.'],
+    ['وش يصير إذا غبت يومين؟', 'نقاطك محفوظة دائماً. ولو رجعت خلال ' . (int)setting('grace_days', '3') . ' أيام تكمل سلسلتك بدون ما تنقطع.'],
+    ['كم سؤال في اليوم؟', 'عندك ' . daily_limit() . ' أسئلة كل يوم، وكل سؤال له ' . (int)setting('question_seconds', '20') . ' ثانية.'],
+    ['وش فايدة رمز التذكرة؟', 'كل رمز تذكرة صحيح يعطيك ' . (int)setting('points_ticket', '50') . ' نقطة إضافية، وبعض التذاكر فيها جوائز فورية.'],
+    ['كيف أستلم جائزتي؟', 'نتواصل مع ولي الأمر على الجوال المسجّل، ونسلّم الجائزة خلال 7 أيام من الفوز.'],
+];
+
+$levelTint = ['bronze' => 'bronze', 'silver' => 'silver', 'gold' => 'gold'];
+
+public_head('تحديات وجوائز للأبطال', $tagline);
 ?>
-<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= e($siteName) ?> — اكشف تذكرتك</title>
-<meta name="description" content="<?= e($tagline) ?>">
-<meta name="theme-color" content="#0b0820">
-<meta name="csrf-token" content="<?= e(csrf_token()) ?>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+Bhaijaan+2:wght@600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="<?= e(asset('assets/css/app.css')) ?>">
-<link rel="icon" href="<?= e(asset('assets/img/favicon.png')) ?>" type="image/png">
-<link rel="apple-touch-icon" href="<?= e(asset('assets/img/favicon.png')) ?>">
-<meta property="og:type" content="website">
-<meta property="og:title" content="<?= e($siteName) ?> — اكشف تذكرتك">
-<meta property="og:description" content="<?= e($tagline) ?>">
-<meta property="og:image" content="<?= e(asset('assets/img/brand/logo-mark.png')) ?>">
-<meta name="twitter:card" content="summary">
-</head>
-<body>
-<div class="bg" aria-hidden="true"></div>
-
-<!-- ===== الشريط العلوي ===== -->
-<header class="nav">
-  <div class="wrap nav__inner">
-    <a class="brand" href="./" aria-label="<?= e($siteName) ?>">
-      <img class="brand__logo" src="<?= e(asset('assets/img/brand/logo-horizontal-dark.png')) ?>" alt="<?= e($siteName) ?>">
-    </a>
-
-    <nav class="nav__links" aria-label="القائمة">
-      <a href="#top" class="is-active"><?= icon('home') ?>الرئيسية</a>
-      <a href="#prizes"><?= icon('gift') ?>الجوائز</a>
-      <a href="#how"><?= icon('grid') ?>كيف تلعب</a>
-      <a href="#winners"><?= icon('trophy') ?>الرابحون</a>
-      <?php if ($support): ?><a href="https://wa.me/<?= e($support) ?>" target="_blank" rel="noopener"><?= icon('chat') ?>تواصل معنا</a><?php endif; ?>
-    </nav>
-
-    <form class="nav__code" id="navCode" autocomplete="off" role="search">
-      <?= icon('ticket') ?>
-      <label for="navCodeInput" class="sr-only">رمز التذكرة</label>
-      <input id="navCodeInput" dir="ltr" maxlength="14" spellcheck="false" placeholder="أدخل رمز التذكرة…">
-      <button type="submit" aria-label="اكشف"><?= icon('search') ?></button>
-    </form>
-
-    <button type="button" class="nav__avatar" data-open-enter aria-label="اكشف تذكرتك">
-      <img src="<?= e(asset('assets/img/art/avatar.svg')) ?>" alt="">
-    </button>
+<body class="home">
+<!-- ===== شاشة الافتتاح: نجمة تسقط وتنفجر ===== -->
+<div class="intro" id="intro" aria-hidden="true">
+  <div class="intro__star"></div>
+  <div class="intro__burst"></div>
+  <div class="intro__brand">
+    <img class="intro__logo" src="<?= e(media_slot_url('logo')) ?>" alt="">
   </div>
-</header>
+  <button type="button" class="intro__skip" id="introSkip">تخطي</button>
+</div>
+
+<div class="bg" aria-hidden="true"></div>
+<canvas class="sky" id="sky" aria-hidden="true"></canvas>
+
+<?php public_nav('home'); ?>
 
 <main id="top">
   <!-- ===== البانر الرئيسي ===== -->
@@ -140,12 +89,16 @@ $howCards = [
           <span class="hero__bar" aria-hidden="true"></span>
           <?php if ($b['body']): ?><p class="hero__lead"><?= e($b['body']) ?></p><?php endif; ?>
           <div class="hero__btns">
-            <button type="button" class="btn btn--primary" data-open-enter><?= icon('play') ?><?= e($b['btn_text'] ?: 'اكشف تذكرتك') ?></button>
-            <a href="#prizes" class="btn btn--ghost"><?= icon('plus') ?>شاهد الجوائز</a>
+            <a href="play.php" class="btn btn--primary"><?= icon('play') ?><?= $player ? 'كمّل تحدي اليوم' : 'ابدأ التحدي مجاناً' ?></a>
+            <button type="button" class="btn btn--ghost" data-open-enter><?= icon('ticket') ?><?= e($b['btn_text'] ?: 'اكشف تذكرتك') ?></button>
           </div>
         </div>
       </div>
       <?php endforeach; ?>
+      <div class="hero__hopper" aria-hidden="true">
+        <span class="hero__shadow"></span>
+        <span class="hero__jump"><img src="<?= e(media_slot_url('mascot')) ?>" alt=""><i class="hero__wand"></i></span>
+      </div>
       <?php if (count($banners) > 1): ?>
       <div class="hero__dots" role="tablist" aria-label="البانرات">
         <?php foreach ($banners as $i => $b): ?><button type="button" role="tab" class="<?= $i === 0 ? 'on' : '' ?>" data-slide="<?= $i ?>" aria-label="بانر <?= $i + 1 ?>"></button><?php endforeach; ?>
@@ -154,15 +107,15 @@ $howCards = [
     </div>
   </section>
 
-  <!-- ===== أرقام الحملة ===== -->
-  <section class="wrap stats" aria-label="أرقام الحملة">
-    <div class="stat"><?= icon('gift') ?><div><span class="stat__n"><?= number_format($remaining) ?></span><span class="stat__l">جائزة متبقية الآن</span></div></div>
-    <div class="stat"><?= icon('trophy') ?><div><span class="stat__n"><?= number_format($winnersTotal) ?></span><span class="stat__l">رابح حتى الآن</span></div></div>
+  <!-- ===== أرقام حية ===== -->
+  <section class="wrap stats stats--4" aria-label="أرقام المنصة">
+    <?php foreach ($stats as [$ic, $n, $label]): ?>
+    <div class="stat reveal"><?= icon($ic) ?><div><span class="stat__n" data-num="<?= $n ?>">0</span><span class="stat__l"><?= e($label) ?></span></div></div>
+    <?php endforeach; ?>
   </section>
 
   <?php if ($winners): ?>
-  <!-- ===== شريط آخر الرابحين ===== -->
-  <div class="ticker" aria-label="آخر الرابحين">
+  <div class="ticker" id="winners" aria-label="آخر الرابحين">
     <div class="ticker__track">
       <?php for ($set = 0; $set < 2; $set++): ?>
       <div class="ticker__set"<?= $set ? ' aria-hidden="true"' : '' ?>>
@@ -175,11 +128,39 @@ $howCards = [
   </div>
   <?php endif; ?>
 
-  <!-- ===== جوائز الحملة ===== -->
+  <!-- ===== المستويات ===== -->
+  <section class="wrap section" id="levels">
+    <div class="section__head">
+      <h2><?= icon('medal') ?>المستويات والجوائز</h2>
+      <a href="play.php" class="view-all">ابدأ الصعود <?= icon('chevL') ?></a>
+    </div>
+    <p class="section__lead">اجمع النقاط واصعد درجة درجة. أول من يوصل لكل مستوى يفوز بجائزته، والسبق بالاجتهاد مو بالشراء.</p>
+    <div class="ladder">
+      <?php foreach ($levels as $i => $lv):
+          $tint = $levelTint[$lv['color']] ?? 'gold';
+          $taken = $reachedCounts[(int)$lv['id']] ?? 0;
+          $seats = max(0, (int)$lv['winners_limit'] - $taken);
+          $mine = $player && (int)$player['points'] >= (int)$lv['min_points']; ?>
+      <article class="lvl lvl--<?= e($tint) ?> reveal<?= $mine ? ' is-mine' : '' ?>" style="--i:<?= $i ?>" data-tilt>
+        <span class="lvl__step"><?= $i + 1 ?></span>
+        <img class="lvl__img" src="<?= e(media_slot_url('level_' . min(3, $i + 1))) ?>" alt="" loading="lazy">
+        <h3 class="lvl__name">المستوى <?= e($lv['name']) ?></h3>
+        <p class="lvl__prize"><?= e($lv['prize']) ?></p>
+        <div class="lvl__meta">
+          <span><?= icon('star') ?><?= number_format((int)$lv['min_points']) ?> نقطة</span>
+          <span><?= icon('trophy') ?><?= $seats > 0 ? 'باقي ' . number_format($seats) . ' فائز' : 'اكتمل الفائزون' ?></span>
+        </div>
+        <?php if ($mine): ?><span class="lvl__badge"><?= icon('check') ?>وصلته!</span><?php endif; ?>
+      </article>
+      <?php endforeach; ?>
+    </div>
+  </section>
+
+  <!-- ===== جوائز التذاكر ===== -->
   <section class="wrap section" id="prizes">
     <div class="section__head">
-      <h2><?= icon('sparkle') ?>الأكثر طلباً هذا الأسبوع</h2>
-      <a href="#winners" class="view-all">عرض الكل <?= icon('chevL') ?></a>
+      <h2><?= icon('sparkle') ?>جوائز التذاكر الفورية</h2>
+      <button type="button" class="view-all" data-open-enter>اكشف تذكرة <?= icon('chevL') ?></button>
     </div>
     <?php if ($prizes): ?>
     <div class="carousel">
@@ -188,7 +169,7 @@ $howCards = [
         <?php foreach ($prizes as $p):
             $left = max(0, (int)$p['quantity'] - (int)$p['won_count']);
             [$tierLabel, $tierIcon] = prize_tier((int)$p['quantity']); ?>
-        <article class="pcard<?= $left === 0 ? ' is-out' : '' ?><?= $tierIcon === 'fire' && $left > 0 ? ' pcard--rare' : '' ?>">
+        <article class="pcard<?= $left === 0 ? ' is-out' : '' ?><?= $tierIcon === 'fire' && $left > 0 ? ' pcard--rare' : '' ?>" data-tilt>
           <img class="pcard__img" src="<?= e(prize_art_url($p['name'], $p['image'])) ?>" alt="" loading="lazy">
           <span class="pcard__badge" title="المتبقي"><?= $left > 0 ? '×' . number_format($left) : 'نفدت' ?></span>
           <div class="pcard__foot">
@@ -201,7 +182,7 @@ $howCards = [
       <button type="button" class="carousel__arrow carousel__arrow--next" data-scroll="prizeRow" data-dir="-1" aria-label="التالي"><?= icon('chevL') ?></button>
     </div>
     <?php else: ?>
-      <p class="empty">الجوائز تُعلن قريباً… ترقّبوا!</p>
+      <p class="empty">جوائز التذاكر تُعلن قريباً… ترقّبوا!</p>
     <?php endif; ?>
   </section>
 
@@ -210,62 +191,71 @@ $howCards = [
     <section class="section" id="how">
       <div class="section__head"><h2><?= icon('grid') ?>كيف تلعب</h2></div>
       <div class="how-grid">
-        <?php foreach ($howCards as $n => [$art, $title, $sub, $tint, $act]): ?>
-        <button type="button" class="hcard hcard--<?= $tint ?>" <?= str_starts_with($act, 'scroll:') ? 'data-scroll-to="' . e(substr($act, 7)) . '"' : 'data-open-enter' ?>>
-          <span class="hcard__art" style="background-image:url('<?= e(asset('assets/img/art/' . $art)) ?>')"></span>
-          <span class="hcard__text"><strong><?= e($title) ?></strong><small><?= e($sub) ?></small></span>
+        <?php foreach ($howCards as $n => [$slot, $title, $sub, $tint]): ?>
+        <a href="play.php" class="hcard hcard--<?= $tint ?> reveal" style="--i:<?= $n ?>">
+          <span class="hcard__art" style="background-image:url('<?= e(media_slot_url($slot)) ?>')"></span>
+          <span class="hcard__text"><strong><?= $n + 1 ?>. <?= e($title) ?></strong><small><?= e($sub) ?></small></span>
           <span class="hcard__go"><?= icon('arrowL') ?></span>
-        </button>
+        </a>
         <?php endforeach; ?>
       </div>
     </section>
 
-    <!-- ===== آخر الرابحين ===== -->
-    <section class="section panel" id="winners">
+    <!-- ===== المتصدرون ===== -->
+    <section class="section panel" id="leaders">
       <div class="section__head">
-        <h2><?= icon('fire') ?><?= $winners ? 'الرابحون الآن' : 'أبرز الجوائز' ?></h2>
-        <a href="#prizes" class="view-all">الكل <?= icon('chevL') ?></a>
+        <h2><?= icon('fire') ?>المتصدرون الآن</h2>
+        <a href="play.php" class="view-all">نافسهم <?= icon('chevL') ?></a>
       </div>
       <ol class="rank">
-        <?php if ($winners): foreach ($winners as $i => $w): ?>
-        <li>
+        <?php if ($leaders): foreach (array_slice($leaders, 0, 5) as $i => $l): ?>
+        <li class="reveal" style="--i:<?= $i ?>">
           <span class="rank__n"><?= $i + 1 ?></span>
-          <img class="rank__thumb" src="<?= e(prize_art_url($w['prize'], $w['image'])) ?>" alt="" loading="lazy">
-          <span class="rank__body"><strong><?= e(first_name($w['child_name'])) ?></strong><small>ربح <?= e($w['prize']) ?></small></span>
-          <span class="rank__meta"><?= icon('clock') ?><?= e(time_ago_ar($w['created_at'])) ?></span>
-        </li>
-        <?php endforeach; elseif ($prizes): foreach (array_slice($prizes, 0, 5) as $i => $p): [$tl, $ti] = prize_tier((int)$p['quantity']); ?>
-        <li>
-          <span class="rank__n"><?= $i + 1 ?></span>
-          <img class="rank__thumb" src="<?= e(prize_art_url($p['name'], $p['image'])) ?>" alt="" loading="lazy">
-          <span class="rank__body"><strong><?= e($p['name']) ?></strong><small><?= e($tl) ?> · كن أول الرابحين!</small></span>
-          <span class="rank__meta rank__meta--<?= e($ti) ?>"><?= icon($ti) ?>×<?= number_format(max(0, (int)$p['quantity'] - (int)$p['won_count'])) ?></span>
+          <img class="rank__thumb rank__thumb--round" src="<?= e(avatar_url($l['avatar'])) ?>" alt="" loading="lazy">
+          <span class="rank__body"><strong><?= e(first_name($l['full_name'])) ?></strong><small>المستوى <?= e(level_name_for((int)$l['points'])) ?></small></span>
+          <span class="rank__meta rank__meta--star"><?= icon('star') ?><?= number_format((int)$l['points']) ?></span>
         </li>
         <?php endforeach; else: ?>
-          <li class="rank__empty">كن أول الرابحين! 🎉</li>
+          <li class="rank__empty">الصدارة فاضية… كن أول بطل! <a href="play.php">ابدأ الآن</a></li>
         <?php endif; ?>
       </ol>
     </section>
   </div>
+
+  <!-- ===== الأسئلة الشائعة ===== -->
+  <section class="wrap section" id="faq">
+    <div class="section__head"><h2><?= icon('chat') ?>أسئلة يسألها الأبطال</h2></div>
+    <div class="faq">
+      <?php foreach ($faq as [$qq, $aa]): ?>
+      <details class="faq__item reveal"><summary><?= e($qq) ?><?= icon('chevD') ?></summary><p><?= e($aa) ?></p></details>
+      <?php endforeach; ?>
+    </div>
+  </section>
+
+  <!-- ===== دعوة أخيرة ===== -->
+  <section class="wrap">
+    <div class="cta reveal">
+      <img class="cta__mascot" src="<?= e(media_slot_url('mascot')) ?>" alt="">
+      <div class="cta__text">
+        <h2>تحدي اليوم ينتظرك!</h2>
+        <p><?= daily_limit() ?> أسئلة، <?= (int)setting('question_seconds', '20') ?> ثانية لكل سؤال، ونقاط تقرّبك من الجائزة الذهبية.</p>
+      </div>
+      <a href="play.php" class="btn btn--primary btn--lg"><?= icon('bolt') ?>يلا نبدأ</a>
+    </div>
+  </section>
 </main>
 
-<footer class="footer">
-  <div class="wrap footer__inner">
-    <span>© <?= date('Y') ?> <?= e($siteName) ?></span>
-    <span>نحفظ الاسم الأول وجوال ولي الأمر للرابحين فقط لتسليم الجائزة.</span>
-    <?php if ($support): ?><a href="https://wa.me/<?= e($support) ?>" target="_blank" rel="noopener">تواصل معنا على واتساب</a><?php endif; ?>
-  </div>
-</footer>
+<?php public_footer(); ?>
 
-<!-- ===== نافذة الكشف ===== -->
+<!-- ===== نافذة كشف التذكرة ===== -->
 <div class="modal" id="resultModal" hidden role="dialog" aria-modal="true" aria-labelledby="enterTitle">
   <div class="modal__panel">
     <button type="button" class="modal__close" data-close aria-label="إغلاق">×</button>
 
     <div class="stage" data-stage="enter">
-      <img class="enter-mascot" src="<?= e(asset('assets/img/art/avatar.svg')) ?>" alt="">
+      <img class="enter-mascot" src="<?= e(media_slot_url('mascot')) ?>" alt="">
       <h2 id="enterTitle" class="enter-title">اكشف تذكرتك</h2>
-      <p class="enter-sub">اكتب الرمز المكتوب على تذكرتك (10 حروف وأرقام)</p>
+      <p class="enter-sub">اكتب الرمز المكتوب على تذكرتك (10 حروف وأرقام)<?= $player ? '' : '، وسجّل في التحدي عشان تاخذ نقاطه' ?></p>
       <form class="code-form" id="codeForm" autocomplete="off" novalidate>
         <label for="code" class="sr-only">رمز التذكرة</label>
         <input id="code" name="code" inputmode="text" maxlength="14" dir="ltr" spellcheck="false" placeholder="XXXX-XXXX-XX" value="<?= e($prefill) ?>">
@@ -293,10 +283,11 @@ $howCards = [
       <p class="win-sub">ربحت <strong id="prizeName"></strong></p>
       <div class="win-prize" id="prizeMedia"></div>
       <p class="claim-no">رقم المطالبة: <bdi id="claimNo" dir="ltr"></bdi></p>
+      <p class="pts-note" data-pts hidden></p>
 
       <form id="claimForm" class="claim-form" novalidate>
         <p class="claim-form__note">اطلب من بابا أو ماما يكملون معك لاستلام الجائزة:</p>
-        <label>اسمك<input name="child_name" maxlength="60" required placeholder="مثال: سارة"></label>
+        <label>اسمك<input name="child_name" maxlength="60" required placeholder="مثال: سارة" value="<?= $player ? e(first_name($player['full_name'])) : '' ?>"></label>
         <label>جوال ولي الأمر<input name="phone" inputmode="tel" dir="ltr" required placeholder="05XXXXXXXX"></label>
         <label class="check"><input type="checkbox" name="consent" value="1" required> أنا ولي الأمر وأوافق على استخدام الرقم لتسليم الجائزة</label>
         <button type="submit" class="btn btn--primary btn--block">تأكيد الاستلام</button>
@@ -321,6 +312,8 @@ $howCards = [
       <svg viewBox="0 0 160 120" class="lose-art" aria-hidden="true"><path d="M20 30a10 10 0 0 1 10-10h100a10 10 0 0 1 10 10v20a12 12 0 0 0 0 24v20a10 10 0 0 1-10 10H30a10 10 0 0 1-10-10V74a12 12 0 0 0 0-24z" fill="#4b3a8f"/><ellipse cx="62" cy="54" rx="7" ry="9" fill="#1b0f3d"/><ellipse cx="98" cy="54" rx="7" ry="9" fill="#1b0f3d"/><circle cx="64" cy="51" r="2.6" fill="#fff"/><circle cx="100" cy="51" r="2.6" fill="#fff"/><path d="M66 80q14 -10 28 0" stroke="#1b0f3d" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M108 64q3 8 0 12q-3-4 0-12z" fill="#6fd8ff"/></svg>
       <h2 class="lose-title">حظ أوفر المرة القادمة</h2>
       <p class="lose-sub">لا تزعل يا بطل! كل تذكرة فرصة جديدة.</p>
+      <p class="pts-note" data-pts hidden></p>
+      <?php if (!$player): ?><a class="btn btn--ghost" href="play.php"><?= icon('brain') ?>سجّل في التحدي وخذ نقاط على كل تذكرة</a><?php endif; ?>
       <button type="button" class="btn btn--primary" data-again>جرّب تذكرة أخرى</button>
     </div>
 
@@ -332,7 +325,6 @@ $howCards = [
   </div>
 </div>
 
-<!-- ===== نافذة مسح QR ===== -->
 <div class="modal" id="scanModal" hidden role="dialog" aria-modal="true" aria-label="مسح رمز QR">
   <div class="modal__panel">
     <button type="button" class="modal__close" data-close aria-label="إغلاق">×</button>
@@ -344,6 +336,7 @@ $howCards = [
 
 <canvas id="confetti" aria-hidden="true"></canvas>
 <script>window.KT = { base: <?= json_encode(rtrim(base_url(''), '/') . '/', JSON_UNESCAPED_SLASHES) ?>, prefill: <?= $prefill !== '' ? 'true' : 'false' ?> };</script>
+<script src="<?= e(asset('assets/js/fx.js')) ?>" defer></script>
 <script src="<?= e(asset('assets/js/app.js')) ?>" defer></script>
 </body>
 </html>
